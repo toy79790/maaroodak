@@ -30,7 +30,9 @@
     "db:migrate:create": "prisma migrate dev --create-only",
     "db:migrate:status": "prisma migrate status",
     "ci": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "check:env": "tsx scripts/check-env.mts"
+    "check:env": "tsx scripts/check-env.mts",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "preflight": "tsx scripts/preflight.mts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

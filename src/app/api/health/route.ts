@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { appEnv, isAIConfigured, env } from '@/config/env';
-import { getStorage } from '@/services/storage';
+import { getStorage, StorageError } from '@/services/storage';
 
 /**
  * الفحص الصحي — docs/DEPLOYMENT.md §10
@@ -55,8 +55,14 @@ function checkAi(): CheckResult {
 function checkStorage(): CheckResult {
   try {
     return { status: getStorage().isReady ? 'ok' : 'not_configured' };
-  } catch {
-    return { status: 'down' };
+  } catch (error) {
+    /*
+     * `not_configured` لا `down`: في بيئة منشورة بلا `STORAGE_DRIVER=s3`
+     * يرفض `getStorage()` العمل عمداً. هذا إعداد ناقص لا عطل — و v1 لا
+     * ترفع ملفات أصلاً، فالتمييز يمنع إنذاراً كاذباً دائماً في المراقبة.
+     */
+    const kind = (error as StorageError)?.kind;
+    return { status: kind === 'not_configured' ? 'not_configured' : 'down' };
   }
 }
 
