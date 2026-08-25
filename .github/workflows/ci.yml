@@ -1,0 +1,120 @@
+name: CI
+
+# بوابة الجودة — docs/DEPLOYMENT.md §19
+#
+# تعمل على كل push و pull request. فشل أي خطوة يمنع الدمج، ومنصات النشر
+# المربوطة بـ GitHub تحترم حالة الفحص فلا تُنشر نسخة فاشلة.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# إلغاء التشغيل السابق على نفس الفرع — لا فائدة من فحص كوميت تجاوزه غيره.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: فحص الجودة
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      # PostgreSQL حقيقية لاختبارات التكامل — لا محاكاة (docs/TESTING.md §4).
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: maroudak_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # قيم اختبارية فقط — لا تُستخدم أي بيانات إنتاج في CI.
+      APP_ENV: development
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5433/maroudak_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5433/maroudak_test?schema=public
+      SESSION_SECRET: ci-only-secret-not-used-anywhere-else-32chars
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      STORAGE_DRIVER: local
+      LOG_LEVEL: error
+
+    steps:
+      - name: جلب الشيفرة
+        uses: actions/checkout@v4
+
+      - name: تهيئة Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: تثبيت التبعيات
+        run: npm ci
+
+      - name: توليد عميل Prisma
+        run: npx prisma generate
+
+      - name: تطبيق الترحيلات
+        # نفس الأمر المستخدم في الإنتاج — يُثبت أن الترحيلات تعمل من الصفر.
+        run: npx prisma migrate deploy
+
+      - name: فحص الأنواع
+        run: npm run typecheck
+
+      - name: فحص الأسلوب
+        run: npm run lint
+
+      - name: الاختبارات
+        run: npm test
+
+      - name: البناء
+        run: npm run build
+
+  security:
+    name: فحص التبعيات
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: ثغرات التبعيات
+        # الثغرات العالية والحرجة تُفشل البناء؛ الأدنى منها تُبلَّغ فقط.
+        run: npm audit --audit-level=high
+
+      - name: لا أسرار في متغيرات العميل
+        # NEXT_PUBLIC_* تُدمج في حزمة المتصفح — أي سرّ فيها مكشوف للجميع.
+        run: |
+          if grep -rEn 'NEXT_PUBLIC_[A-Z_]*(KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL)' \
+               --include='*.ts' --include='*.tsx' --include='*.mjs' \
+               --include='.env.example' . ; then
+            echo "::error::متغيّر NEXT_PUBLIC_* يحمل اسماً يوحي بسرّ."
+            exit 1
+          fi
+          echo "✓ لا أسرار في متغيرات العميل"
+
+      - name: لا ملفات .env مُودَعة
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "::error::ملف .env مُودَع في Git."
+            exit 1
+          fi
+          echo "✓ لا ملفات .env في المستودع"

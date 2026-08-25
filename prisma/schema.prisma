@@ -1,0 +1,780 @@
+// ============================================================================
+//  معروضك — مخطط قاعدة البيانات
+//  المرجع الكامل للتصميم والفهارس وسياسات الحذف: docs/DATABASE.md
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+//  التعدادات
+// ============================================================================
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum DepartmentCategory {
+  GOVERNMENT
+  SERVICE
+  EDUCATION
+  PRIVATE
+  OTHER
+}
+
+enum QuestionType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  SELECT
+  RADIO
+  CHECKBOX
+  YES_NO
+  FILE
+}
+
+enum ConditionAction {
+  SHOW
+  HIDE
+  REQUIRE
+  OPTIONAL
+}
+
+enum ConditionLogic {
+  AND
+  OR
+}
+
+enum PromptType {
+  SYSTEM
+  GENERATION
+  FOLLOW_UP
+  QUALITY_CHECK
+  TOOL_IMPROVE
+  TOOL_FORMALIZE
+  TOOL_SHORTEN
+  TOOL_EXPAND
+  TOOL_CLARIFY
+  TOOL_REWRITE
+  TOOL_TITLE
+  TOOL_INTRO
+  TOOL_CONCLUSION
+  TOOL_PROOFREAD
+}
+
+enum LetterStatus {
+  DRAFT
+  GENERATING
+  GENERATED
+  EDITED
+  COMPLETED
+  ARCHIVED
+  FAILED
+}
+
+enum VersionSource {
+  AI_GENERATED
+  USER_EDIT
+  AI_TOOL
+  RESTORED
+}
+
+enum InterviewStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  CONVERTED
+}
+
+enum FavoriteType {
+  DEPARTMENT
+  TEMPLATE
+  LETTER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum CreditReason {
+  SIGNUP_BONUS
+  PLAN_GRANT
+  ADMIN_ADJUST
+  GENERATE_LETTER
+  AI_TOOL
+  REGENERATE
+  QUALITY_CHECK
+  FOLLOW_UP
+  REFUND
+  EXPIRE
+}
+
+enum AIOperation {
+  GENERATE
+  FOLLOW_UP
+  QUALITY_CHECK
+  IMPROVE
+  FORMALIZE
+  SHORTEN
+  EXPAND
+  CLARIFY
+  REWRITE
+  TITLE
+  INTRO
+  CONCLUSION
+  PROOFREAD
+}
+
+enum AIStatus {
+  SUCCESS
+  FAILED
+  BLOCKED
+  TIMEOUT
+  ORPHANED
+}
+
+enum FeedbackRating {
+  THUMBS_UP
+  THUMBS_DOWN
+}
+
+// ============================================================================
+//  المنظمات (Multi-tenancy) — docs/ARCHITECTURE.md §8
+//  organizationId = null على أي سجل يعني: سجل نظام عام يراه الجميع.
+// ============================================================================
+
+model Organization {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  logoUrl       String?
+  creditBalance Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  planId String?
+  plan   Plan?   @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  members       OrganizationMember[]
+  departments   Department[]
+  requestTypes  RequestType[]
+  questions     Question[]
+  templates     Template[]
+  prompts       Prompt[]
+  letters       Letter[]
+  subscriptions Subscription[]
+  aiUsages      AIUsage[]
+
+  @@index([isActive])
+}
+
+model OrganizationMember {
+  id        String   @id @default(cuid())
+  role      OrgRole  @default(MEMBER)
+  createdAt DateTime @default(now())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+// ============================================================================
+//  الهوية
+// ============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  nationalId    String?
+  city          String?
+  role          UserRole  @default(USER)
+  isActive      Boolean   @default(true)
+  creditBalance Int       @default(0)
+  emailVerifiedAt DateTime?
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
+  memberships         OrganizationMember[]
+  letters             Letter[]
+  letterVersions      LetterVersion[]
+  interviewSessions   InterviewSession[]
+  favorites           Favorite[]
+  creditTransactions  CreditTransaction[]
+  aiUsages            AIUsage[]
+  feedbacks           Feedback[]
+  auditLogs           AuditLog[]
+  subscriptions       Subscription[]
+  analyticsEvents     AnalyticsEvent[]
+  settingsUpdated     SystemSetting[]
+
+  @@index([role, isActive])
+  @@index([createdAt])
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  /// SHA-256 للرمز — لا نخزّن الرمز نفسه (docs/SECURITY.md §2)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  ip        String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+  lastSeenAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ============================================================================
+//  الكتالوج: الجهات وأنواع الطلبات
+// ============================================================================
+
+model Department {
+  id          String             @id @default(cuid())
+  slug        String
+  name        String
+  nameEn      String?
+  category    DepartmentCategory
+  description String?
+  logoUrl     String?
+  /// صيغة المخاطبة: "معالي وزير الداخلية" — تُستخدم في القالب
+  addressee   String?
+  /// اللقب: "معالي" / "سعادة" / "صاحب السمو الملكي"
+  honorific   String?
+  order       Int                @default(0)
+  isActive    Boolean            @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  requestTypes DepartmentRequestType[]
+  questions    Question[]
+  templates    Template[]
+  prompts      Prompt[]
+  letters      Letter[]
+  interviews   InterviewSession[]
+
+  @@unique([slug, organizationId])
+  @@index([organizationId, isActive, order])
+  @@index([category, isActive])
+}
+
+model RequestType {
+  id          String    @id @default(cuid())
+  slug        String
+  name        String
+  description String?
+  icon        String?
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  departments DepartmentRequestType[]
+  questions   Question[]
+  templates   Template[]
+  prompts     Prompt[]
+  letters     Letter[]
+  interviews  InterviewSession[]
+
+  @@unique([slug, organizationId])
+  @@index([organizationId, isActive, order])
+}
+
+/// الربط الذي يجعل «الخيارات تختلف حسب الجهة».
+model DepartmentRequestType {
+  id       String  @id @default(cuid())
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  requestTypeId String
+  requestType   RequestType @relation(fields: [requestTypeId], references: [id], onDelete: Cascade)
+
+  /// تجاوز اختياري للقالب/الـ Prompt لهذه الثنائية تحديداً
+  templateId String?
+  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  promptId String?
+  prompt   Prompt? @relation(fields: [promptId], references: [id], onDelete: SetNull)
+
+  @@unique([departmentId, requestTypeId])
+  @@index([departmentId, isActive, order])
+  @@index([requestTypeId])
+}
+
+// ============================================================================
+//  محرك الأسئلة
+// ============================================================================
+
+model Question {
+  id          String       @id @default(cuid())
+  /// المفتاح المستخدم في القالب: {{a.debt_amount}} — فريد ضمن نطاقه
+  key         String
+  label       String
+  description String?
+  type        QuestionType
+  required    Boolean      @default(true)
+  placeholder String?
+  helpText    String?
+  /// أسئلة تحمل نفس groupKey تُعرض في شاشة واحدة
+  groupKey    String?
+  order       Int          @default(0)
+  /// تلميح للذكاء الاصطناعي: كيف يوظّف هذه الإجابة في الصياغة
+  aiHint      String?
+  /// قيود التحقق: { min, max, minLength, maxLength, pattern }
+  validation  Json?
+  isActive    Boolean      @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  /// النطاق الثلاثي — انظر docs/DATABASE.md §3
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  requestTypeId String?
+  requestType   RequestType? @relation(fields: [requestTypeId], references: [id], onDelete: Cascade)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  options    QuestionOption[]
+  conditions QuestionCondition[]
+
+  @@index([organizationId, isActive, order])
+  @@index([departmentId, requestTypeId, isActive])
+  @@index([requestTypeId, isActive])
+}
+
+model QuestionOption {
+  id    String @id @default(cuid())
+  value String
+  label String
+  order Int    @default(0)
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, value])
+  @@index([questionId, order])
+}
+
+/// قاعدة شرطية واحدة تؤثر على سؤال هدف.
+/// clauses: [{ sourceQuestionKey, operator, value }]
+model QuestionCondition {
+  id      String          @id @default(cuid())
+  action  ConditionAction @default(SHOW)
+  logic   ConditionLogic  @default(AND)
+  clauses Json
+  order   Int             @default(0)
+  isActive Boolean        @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  targetQuestionId String
+  targetQuestion   Question @relation(fields: [targetQuestionId], references: [id], onDelete: Cascade)
+
+  @@index([targetQuestionId, isActive])
+}
+
+// ============================================================================
+//  القوالب والـ Prompts
+// ============================================================================
+
+model Template {
+  id          String    @id @default(cuid())
+  slug        String
+  name        String
+  description String?
+  /// نص القالب مع {{variables}} و {{#if}} — والموضع {{ai_body}}
+  body        String
+  isDefault   Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  version     Int       @default(1)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  requestTypeId String?
+  requestType   RequestType? @relation(fields: [requestTypeId], references: [id], onDelete: SetNull)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  letters       Letter[]
+  departmentTypes DepartmentRequestType[]
+
+  @@unique([slug, organizationId])
+  @@index([organizationId, isActive])
+  @@index([departmentId, requestTypeId, isActive])
+}
+
+model Prompt {
+  id          String     @id @default(cuid())
+  key         String
+  name        String
+  description String?
+  type        PromptType
+  content     String
+  model       String?
+  /// يُستخدم فقط مع النماذج التي تدعم المعاينة — docs/DECISIONS.md #D-012
+  temperature Float?
+  maxTokens   Int?
+  version     Int        @default(1)
+  isActive    Boolean    @default(true)
+  deletedAt   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  requestTypeId String?
+  requestType   RequestType? @relation(fields: [requestTypeId], references: [id], onDelete: SetNull)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  departmentTypes DepartmentRequestType[]
+
+  @@unique([key, organizationId])
+  @@index([type, isActive])
+  @@index([departmentId, requestTypeId, type, isActive])
+}
+
+// ============================================================================
+//  المقابلة والمعاريض
+// ============================================================================
+
+model InterviewSession {
+  id           String          @id @default(cuid())
+  /// خريطة الإجابات { questionKey: value } — تشمل المخفية (docs/DECISIONS.md #D-015)
+  answers      Json            @default("{}")
+  currentStep  Int             @default(0)
+  status       InterviewStatus @default(IN_PROGRESS)
+  /// أسئلة المتابعة التي اقترحها الذكاء الاصطناعي
+  followUps    Json?
+  lastActiveAt DateTime        @default(now())
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  requestTypeId String
+  requestType   RequestType @relation(fields: [requestTypeId], references: [id], onDelete: Restrict)
+
+  letterId String? @unique
+  letter   Letter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status, lastActiveAt])
+  @@index([status, lastActiveAt])
+}
+
+model Letter {
+  id             String       @id @default(cuid())
+  title          String
+  subject        String?
+  contentHtml    String
+  contentText    String
+  /// نسخة مجمّدة من الإجابات لحظة التوليد
+  answers        Json         @default("{}")
+  status         LetterStatus @default(DRAFT)
+  /// تقرير الفحص الثماني — docs/AI_SYSTEM.md §7
+  qualityReport  Json?
+  currentVersion Int          @default(1)
+  isFavorite     Boolean      @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+
+  requestTypeId String
+  requestType   RequestType @relation(fields: [requestTypeId], references: [id], onDelete: Restrict)
+
+  templateId String?
+  template   Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  versions  LetterVersion[]
+  feedbacks Feedback[]
+  aiUsages  AIUsage[]
+  interview InterviewSession?
+
+  @@index([userId, deletedAt, createdAt])
+  @@index([userId, status])
+  @@index([userId, departmentId])
+  @@index([userId, isFavorite])
+  @@index([organizationId, createdAt])
+  @@index([departmentId, createdAt])
+}
+
+model LetterVersion {
+  id          String        @id @default(cuid())
+  version     Int
+  title       String
+  contentHtml String
+  source      VersionSource
+  note        String?
+  createdAt   DateTime      @default(now())
+
+  letterId String
+  letter   Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([letterId, version])
+  @@index([letterId, createdAt])
+}
+
+model Feedback {
+  id         String         @id @default(cuid())
+  rating     FeedbackRating
+  comment    String?
+  categories String[]       @default([])
+  createdAt  DateTime       @default(now())
+
+  letterId String
+  letter   Letter @relation(fields: [letterId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([letterId])
+  @@index([rating, createdAt])
+}
+
+model Favorite {
+  id        String       @id @default(cuid())
+  type      FavoriteType
+  targetId  String
+  createdAt DateTime     @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, targetId])
+  @@index([userId, type])
+}
+
+// ============================================================================
+//  الاشتراكات والرصيد
+// ============================================================================
+
+model Plan {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  name            String
+  description     String?
+  priceMonthly    Int      @default(0)
+  currency        String   @default("SAR")
+  lettersPerMonth Int      @default(3)
+  creditsPerMonth Int      @default(3)
+  features        Json     @default("[]")
+  isPopular       Boolean  @default(false)
+  order           Int      @default(0)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscriptions Subscription[]
+  organizations Organization[]
+
+  @@index([isActive, order])
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  status            SubscriptionStatus @default(ACTIVE)
+  periodStart       DateTime           @default(now())
+  periodEnd         DateTime
+  cancelAtPeriodEnd Boolean            @default(false)
+  /// مُهيّأ لبوابة دفع مستقبلية — لا تنفيذ في v1
+  provider          String?
+  externalId        String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([organizationId, status])
+  @@index([status, periodEnd])
+}
+
+/// دفتر أستاذ — الرصيد في User.creditBalance مشتق منه وقابل لإعادة الحساب.
+model CreditTransaction {
+  id           String       @id @default(cuid())
+  amount       Int
+  balanceAfter Int
+  reason       CreditReason
+  referenceId  String?
+  meta         Json?
+  createdAt    DateTime     @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([reason, createdAt])
+}
+
+// ============================================================================
+//  الرصد والتحليلات
+// ============================================================================
+
+/// عدّادات فقط — لا نص Prompt ولا مخرَج (docs/SECURITY.md §11)
+model AIUsage {
+  id           String      @id @default(cuid())
+  operation    AIOperation
+  provider     String      @default("anthropic")
+  model        String
+  inputTokens  Int         @default(0)
+  outputTokens Int         @default(0)
+  cachedTokens Int         @default(0)
+  costUsd      Decimal     @default(0) @db.Decimal(12, 6)
+  latencyMs    Int         @default(0)
+  status       AIStatus    @default(SUCCESS)
+  errorCode    String?
+  createdAt    DateTime    @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  letterId String?
+  letter   Letter? @relation(fields: [letterId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([model, createdAt])
+  @@index([operation, status, createdAt])
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  name        String
+  props       Json     @default("{}")
+  anonymousId String?
+  createdAt   DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([name, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([actorId, createdAt])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String   @default("general")
+  updatedAt DateTime @updatedAt
+
+  updatedById String?
+  updatedBy   User?   @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([category])
+}

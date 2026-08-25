@@ -1,0 +1,46 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+build/
+next-env.d.ts
+
+# production
+dist/
+
+# testing
+coverage/
+playwright-report/
+test-results/
+.playwright/
+
+# local database (embedded postgres)
+.pgdata/
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# misc
+*.tsbuildinfo
+.turbo/
+
+# local object storage (development driver)
+.storage/
