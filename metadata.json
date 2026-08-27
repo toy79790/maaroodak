@@ -1,0 +1,6 @@
+{
+  "name": "معروضك",
+  "description": "منصة ذكية لإنشاء المعاريض والخطابات الرسمية",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
