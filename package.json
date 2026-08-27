@@ -7,9 +7,9 @@
     "node": ">=20.11.0"
   },
   "scripts": {
-    "dev": "next dev -p 3000 -H 0.0.0.0",
+    "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "next start -p 3000 -H 0.0.0.0",
+    "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:start": "tsx scripts/db-server.ts start",

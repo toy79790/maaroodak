@@ -41,15 +41,13 @@ const serverSchema = z.object({
   APP_ENV: z.enum(APP_ENVS).default('development'),
 
   // --- قاعدة البيانات -------------------------------------------------------
-  DATABASE_URL: z
-    .string()
-    .default('postgresql://postgres:postgres@localhost:5432/maroudak?schema=public'),
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL مطلوب'),
   DATABASE_URL_TEST: optionalString,
 
   // --- الجلسات --------------------------------------------------------------
   SESSION_SECRET: z
     .string()
-    .default('dev-session-secret-change-in-production-at-least-32-chars'),
+    .min(32, 'SESSION_SECRET يجب أن يكون 32 حرفاً على الأقل'),
 
   // --- الذكاء الاصطناعي ------------------------------------------------------
   /** بدونه تعمل المنصة بكل شيء عدا التوليد. */
