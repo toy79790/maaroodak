@@ -100,11 +100,21 @@ git status --short | grep -E '^\?\?.*\.env$'   # يجب ألّا يُخرج شي
 | Production | `maroudak_prod` |
 | Staging | `maroudak_staging` |
 
-انسخ رابط الاتصال. يجب أن يحوي `sslmode=require`:
+انسخ **رابطين** لا رابطاً واحداً. يجب أن يحوي كلاهما `sslmode=require`:
+
+| المتغيّر | الرابط | يُستخدم في |
+|---|---|---|
+| `DATABASE_URL` | المُجمَّع — يحوي `-pooler` | وقت التشغيل |
+| `DIRECT_DATABASE_URL` | المباشر — بلا `-pooler` | الترحيلات أثناء البناء |
 
 ```
-postgresql://user:pass@host.region.provider.com:5432/maroudak_prod?sslmode=require
+DATABASE_URL=postgresql://user:pass@ep-xxx-pooler.region.aws.neon.tech/maroudak_prod?sslmode=require
+DIRECT_DATABASE_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/maroudak_prod?sslmode=require
 ```
+
+> **لماذا اثنان؟** دوال Vercel تفتح اتصالاً لكل استدعاء فتحتاج المُجمَّع،
+> لكن مُجمِّع Neon لا يدعم أقفال Prisma Migrate الاستشارية فيفشل
+> `migrate deploy` أثناء البناء. التفصيل في [DECISIONS.md #D-032](DECISIONS.md).
 
 > إن لم يضف المزوّد `sslmode` تلقائياً فأضفه يدوياً. اتصال قاعدة بيانات
 > بلا TLS يعني مرور بيانات المستخدمين مكشوفة على الشبكة.
@@ -132,7 +142,8 @@ postgresql://user:pass@host.region.provider.com:5432/maroudak_prod?sslmode=requi
 APP_ENV=production
 NEXT_PUBLIC_APP_URL=https://www.example.com
 CANONICAL_HOST_MODE=www
-DATABASE_URL=postgresql://…?sslmode=require
+DATABASE_URL=postgresql://…-pooler…?sslmode=require
+DIRECT_DATABASE_URL=postgresql://…?sslmode=require
 SESSION_SECRET=<48 بايت عشوائية>
 ANTHROPIC_API_KEY=sk-ant-…
 LOG_LEVEL=info

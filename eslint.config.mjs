@@ -21,6 +21,9 @@ const eslintConfig = [
       'src/generated/**',
       '.pgdata/**',
       '.storage/**',
+      // شجرات عمل Claude Code المؤقتة — نسخة كاملة من المشروع، فحصها
+      // يُكرّر كل خطأ ويُفشل `npm run verify` محلياً بلا سبب حقيقي.
+      '.claude/**',
     ],
   },
   {

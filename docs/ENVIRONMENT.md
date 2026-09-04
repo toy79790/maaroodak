@@ -118,6 +118,24 @@ DATABASE_URL="postgresql://user:pass@host:5432/maroudak_prod?sslmode=require"
 فحص الإقلاع في الإنتاج يحذّر إن أشار الرابط إلى `localhost` — الحماية من
 أشيع خطأ نشر: نسيان تبديل رابط قاعدة التطوير.
 
+### `DIRECT_DATABASE_URL` — مطلوب مع المُجمِّعات
+
+اتصال **مباشر** بقاعدة البيانات، يستخدمه Prisma Migrate وحده. وقت التشغيل
+لا يلمسه إطلاقاً.
+
+```env
+# محلياً — لا مُجمِّع، فهو نفس DATABASE_URL
+DIRECT_DATABASE_URL="postgresql://postgres:postgres@localhost:5433/maroudak?schema=public"
+
+# على Neon — الرابط بلا `-pooler` في اسم المضيف
+DIRECT_DATABASE_URL="postgresql://user:pass@ep-xxx.region.aws.neon.tech/maroudak?sslmode=require"
+```
+
+**لماذا متغيّران؟** الاستضافة بلا خادم تفتح اتصالاً لكل استدعاء، فوقت
+التشغيل يحتاج المُجمَّع. لكن مُجمِّع Neon (PgBouncer في وضع المعاملات) لا
+يدعم الأقفال الاستشارية التي يستخدمها `prisma migrate deploy`، فالترحيل
+عبره يفشل أثناء البناء. التفصيل في [DECISIONS.md #D-032](DECISIONS.md).
+
 ### `DATABASE_URL_TEST` — للتطوير و CI
 
 قاعدة اختبارات التكامل. **تُعاد تهيئتها في كل تشغيل** — لا توجّهها أبداً إلى

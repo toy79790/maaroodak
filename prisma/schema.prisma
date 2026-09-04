@@ -9,7 +9,13 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // وقت التشغيل: الاتصال المُجمَّع. دوال الاستضافة بلا خادم تفتح اتصالاً
+  // لكل استدعاء، والاتصال المباشر ينفد تحت أي حِمل.
   url      = env("DATABASE_URL")
+  // الترحيلات: اتصال مباشر. مُجمِّع Neon (PgBouncer) في وضع المعاملات لا
+  // يدعم الأقفال الاستشارية التي يستخدمها Prisma Migrate، فيفشل
+  // `migrate deploy` أثناء البناء. انظر docs/DECISIONS.md #D-032
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 // ============================================================================

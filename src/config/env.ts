@@ -43,6 +43,11 @@ const serverSchema = z.object({
   // --- قاعدة البيانات -------------------------------------------------------
   DATABASE_URL: z.string().min(1, 'DATABASE_URL مطلوب'),
   DATABASE_URL_TEST: optionalString,
+  /**
+   * اتصال مباشر للترحيلات فقط — يقرؤه Prisma من البيئة لا من هنا.
+   * مُعرَّف هنا للتوثيق ولمنع اعتباره متغيّراً مجهولاً (#D-032).
+   */
+  DIRECT_DATABASE_URL: optionalString,
 
   // --- الجلسات --------------------------------------------------------------
   SESSION_SECRET: z
