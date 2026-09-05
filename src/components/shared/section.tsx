@@ -27,13 +27,20 @@ export function Section({
   );
 }
 
+/**
+ * ترويسة قسم.
+ *
+ * لا عنوان فرعي فوق العنوان: كان يكرّر ما يقوله العنوان نفسه («كيف تعمل»
+ * فوق «أربع خطوات…») فيقرأ كزينة قالبية لا كمعلومة.
+ *
+ * والمحاذاة تبدأ من اليمين افتراضاً: العربية تُقرأ من حافة يمنى ثابتة،
+ * وتوسيط سبعة عناوين متتالية يهدر تلك الحافة.
+ */
 export function SectionHeading({
-  eyebrow,
   title,
   description,
-  align = 'center',
+  align = 'start',
 }: {
-  eyebrow?: string;
   title: string;
   description?: string;
   align?: 'center' | 'start';
@@ -45,9 +52,6 @@ export function SectionHeading({
         align === 'center' ? 'mx-auto text-center' : 'text-start',
       )}
     >
-      {eyebrow ? (
-        <p className="mb-3 text-sm font-semibold text-primary">{eyebrow}</p>
-      ) : null}
       <h2 className="text-2xl font-bold sm:text-3xl">{title}</h2>
       {description ? (
         <p className="mt-4 text-muted-foreground">{description}</p>

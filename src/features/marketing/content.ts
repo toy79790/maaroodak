@@ -318,6 +318,6 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
 export const TRUST_POINTS: readonly { label: string; icon: LucideIcon }[] = [
   { label: 'لا يخترع معلومات', icon: ShieldCheck },
   { label: 'مخصّص لكل جهة', icon: Building2 },
-  { label: 'PDF و Word عربي سليم', icon: FileDown },
+  { label: 'يفتح في Word بحروف متصلة', icon: FileDown },
   { label: 'فحص جودة تلقائي', icon: Sparkles },
 ];

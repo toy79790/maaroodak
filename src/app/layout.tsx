@@ -69,8 +69,16 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ar" dir="rtl" suppressHydrationWarning>
-      <body className={cn(cairo.variable, amiri.variable, 'antialiased')}>
+    /* متغيّرات الخطوط على <html> لا على <body>: رموز @theme تُعرَّف على
+       :root، و`--font-sans: var(--font-cairo)` هناك لا يرى متغيّراً معرّفاً
+       على <body> — فيصبح الرمز غير صالح ويسقط الخط كله إلى افتراضي النظام. */
+    <html
+      lang="ar"
+      dir="rtl"
+      className={cn(cairo.variable, amiri.variable)}
+      suppressHydrationWarning
+    >
+      <body className="antialiased">
         {children}
         <Toaster
           position="top-center"

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -28,7 +28,6 @@ export function HowItWorks() {
   return (
     <Section id="how-it-works" muted>
       <SectionHeading
-        eyebrow="كيف تعمل"
         title="أربع خطوات من الفكرة إلى خطاب جاهز"
         description="لا تبدأ من صفحة بيضاء. نحن نسألك، وأنت تجيب."
       />
@@ -36,7 +35,7 @@ export function HowItWorks() {
       <ol className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {STEPS.map((step) => (
           <li key={step.number}>
-            <Card className="h-full p-6">
+            <Card className="h-full p-6 surface-flat">
               <div className="flex items-center gap-3">
                 <span className="inline-flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                   {step.number}
@@ -61,14 +60,13 @@ export function Features() {
   return (
     <Section id="features">
       <SectionHeading
-        eyebrow="المميزات"
         title="ليست أداة كتابة عامة"
         description="الفرق ليس في الصياغة — بل في معرفة ما يجب أن يُقال لكل جهة، وما لا يجوز اختراعه."
       />
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {FEATURES.map((feature) => (
-          <Card key={feature.title} className="p-6">
+          <Card key={feature.title} className="p-6 surface-flat">
             <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary-subtle text-primary">
               <feature.icon className="size-5" aria-hidden />
             </span>
@@ -89,14 +87,13 @@ export function SupportedDepartments() {
   return (
     <Section id="departments" muted>
       <SectionHeading
-        eyebrow="الجهات المدعومة"
         title="جهات حكومية وخدمية وتعليمية وخاصة"
         description="لكل جهة أسئلتها وصيغة مخاطبتها وقالبها. وإن لم تجد جهتك، اختر «جهة أخرى»."
       />
 
       <div className="grid gap-5 lg:grid-cols-2">
         {DEPARTMENT_GROUPS.map((group) => (
-          <Card key={group.category} className="p-6">
+          <Card key={group.category} className="p-6 surface-flat">
             <div className="flex items-center gap-3">
               <span className="inline-flex size-9 items-center justify-center rounded-lg bg-primary-subtle text-primary">
                 <group.icon className="size-4.5" aria-hidden />
@@ -128,7 +125,7 @@ export function SupportedDepartments() {
           {REQUEST_TYPE_CHIPS.map((type) => (
             <li
               key={type}
-              className="rounded-full bg-surface px-3 py-1.5 text-sm text-muted-foreground shadow-soft"
+              className="rounded-full border border-border bg-surface px-3 py-1.5 text-sm text-muted-foreground"
             >
               {type}
             </li>
@@ -156,7 +153,6 @@ export function ExampleSection() {
   return (
     <Section id="examples">
       <SectionHeading
-        eyebrow="نموذج"
         title="هكذا يبدو معروضك"
         description="مثال توضيحي لمخرجات المنصة — الصياغة تتغيّر بالكامل حسب الجهة ونوع الطلب وإجاباتك."
       />
@@ -215,7 +211,6 @@ export function Pricing() {
   return (
     <Section id="pricing" muted>
       <SectionHeading
-        eyebrow="الأسعار"
         title="ابدأ مجاناً، وارتقِ عند الحاجة"
         description="كل الخطط تشمل الجهات وأنواع الطلبات كاملة. الفرق في عدد المعاريض والأدوات المتقدمة."
       />
@@ -225,7 +220,7 @@ export function Pricing() {
           <Card
             key={plan.key}
             className={cn(
-              'relative flex flex-col p-6',
+              'relative flex flex-col p-6 surface-flat',
               plan.isPopular && 'border-primary ring-1 ring-primary',
             )}
           >
@@ -290,7 +285,7 @@ export function Pricing() {
 export function Faq() {
   return (
     <Section id="faq">
-      <SectionHeading eyebrow="الأسئلة الشائعة" title="أسئلة قد تدور في ذهنك" />
+      <SectionHeading title="أسئلة قد تدور في ذهنك" />
 
       <div className="mx-auto max-w-3xl">
         <Accordion type="single" collapsible className="w-full">
@@ -327,10 +322,7 @@ export function FinalCta() {
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button size="lg" variant="secondary" asChild>
-                <Link href="/new">
-                  ابدأ كتابة معروضك
-                  <ArrowLeft className="size-5" />
-                </Link>
+                <Link href="/new">ابدأ كتابة معروضك</Link>
               </Button>
             </div>
           </div>
