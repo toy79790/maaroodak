@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { jsonError, zodFieldErrors } from '@/lib/api/response';
 import { errors, AppError } from '@/lib/api/errors';
 import { clientIp, rateLimit, type RateLimitRule } from '@/lib/security/rate-limit';
-import { checkOrigin } from '@/lib/security/cors';
+import { assertSameOrigin } from '@/lib/security/cors';
 import { events } from '@/lib/logging/logger';
 
 /**
@@ -16,23 +16,6 @@ import { events } from '@/lib/logging/logger';
  * ← المعالجة ← تحويل أي استثناء إلى استجابة آمنة. غيابه يعني أن كل مسار
  * يعيد تنفيذ هذه الخطوات، ونسيان واحدة منها يمرّ بلا أن يُلاحَظ.
  */
-
-/**
- * دفاع CSRF ثانٍ بعد SameSite=Lax — docs/SECURITY.md §6
- * الأصول المسموح بها تأتي من البيئة لا من الشيفرة (`lib/security/cors.ts`).
- */
-function assertSameOrigin(request: NextRequest): void {
-  const result = checkOrigin(request);
-
-  if (!result.allowed) {
-    events.authFailure(
-      'origin_check',
-      result.reason ?? 'unknown',
-      request.headers.get('origin') ?? undefined,
-    );
-    throw errors.forbidden('طلب غير مصرّح به من مصدر خارجي.');
-  }
-}
 
 export interface HandlerOptions<TBody> {
   /** مخطط جسم الطلب — يُقرأ ويُتحقق تلقائياً. */

@@ -12,12 +12,14 @@ export default function NotFound() {
       <p className="mt-2 max-w-sm text-muted-foreground">
         الرابط الذي فتحته غير صحيح، أو أن العنصر حُذف أو لا يخصّ حسابك.
       </p>
+      {/* الرئيسية أولاً: هذه الصفحة تظهر للزائر غير المسجَّل أيضاً، وتوجيهه
+          إلى لوحة التحكم يرميه على شاشة تسجيل دخول لا يريدها. */}
       <div className="mt-8 flex gap-3">
         <Button asChild>
-          <Link href="/dashboard">لوحة التحكم</Link>
+          <Link href="/">الصفحة الرئيسية</Link>
         </Button>
         <Button variant="secondary" asChild>
-          <Link href="/">الصفحة الرئيسية</Link>
+          <Link href="/dashboard">لوحة التحكم</Link>
         </Button>
       </div>
     </div>

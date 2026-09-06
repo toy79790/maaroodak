@@ -6,7 +6,7 @@ import { jsonError, zodFieldErrors } from '@/lib/api/response';
 import { errors } from '@/lib/api/errors';
 import { assertPermission } from '@/lib/auth/guards';
 import { clientIp } from '@/lib/security/rate-limit';
-import { checkOrigin } from '@/lib/security/cors';
+import { assertSameOrigin } from '@/lib/security/cors';
 import type { Permission } from '@/lib/auth/rbac';
 import type { AdminContext } from '@/features/admin/service';
 
@@ -17,12 +17,6 @@ import type { AdminContext } from '@/features/admin/service';
  * ← التحقق ← بناء سياق التدقيق. الحارس هنا لا في التخطيط: التخطيط لا يعمل
  * على مسارات الـ API (docs/SECURITY.md §3).
  */
-
-function assertSameOrigin(request: NextRequest): void {
-  if (!checkOrigin(request).allowed) {
-    throw errors.forbidden('طلب غير مصرّح به من مصدر خارجي.');
-  }
-}
 
 export interface AdminHandlerArgs<TBody, TParams> {
   request: NextRequest;

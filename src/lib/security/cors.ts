@@ -1,6 +1,8 @@
 import 'server-only';
 
 import { allowedOrigins, isDeployed } from '@/config/env';
+import { errors } from '@/lib/api/errors';
+import { events } from '@/lib/logging/logger';
 
 /**
  * فحص الأصل و CORS — docs/SECURITY.md §6
@@ -59,6 +61,31 @@ export function checkOrigin(request: {
   if (isAllowedOrigin(origin)) return { allowed: true };
 
   return { allowed: false, reason: 'origin_not_allowed' };
+}
+
+/**
+ * يرفض الطلب المُغيِّر القادم من أصل غير مصرّح به — دفاع CSRF ثانٍ بعد
+ * `SameSite=Lax` (docs/SECURITY.md §6).
+ *
+ * ⚠️ **كل معالِج مُغيِّر يجب أن يمرّ بهذا**، إما عبر أحد مصنعَي المعالِجات
+ * (`createHandler` · `createAdminHandler`) وإما بنداء مباشر في أوله.
+ * الاختبار `tests/unit/api-origin-guard.test.ts` يفرض ذلك على كل مسار
+ * جديد، فلا يتسرّب مسار بلا حماية كما تسرّب سابقاً.
+ *
+ * السبب في وجوده هنا لا في مصنع بعينه: المسارات ذات المعاملات الديناميكية
+ * (`[id]`) لا يستوعبها توقيع `createHandler`، فتُكتب يدوياً وتحتاج الحارس.
+ */
+export function assertSameOrigin(request: { method: string; headers: Headers }): void {
+  const result = checkOrigin(request);
+  if (result.allowed) return;
+
+  events.authFailure(
+    'origin_check',
+    result.reason ?? 'unknown',
+    request.headers.get('origin') ?? undefined,
+  );
+
+  throw errors.forbidden('طلب غير مصرّح به من مصدر خارجي.');
 }
 
 /**

@@ -47,8 +47,12 @@ function StructuredData() {
   return (
     <script
       type="application/ld+json"
-      // محتوى ثابت من الخادم، لا مدخلات مستخدم.
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      // محتوى ثابت من الخادم، لا مدخلات مستخدم. ومع ذلك يُهرَّب `<`:
+      // نصّ يحوي `</script>` يغلق الوسم مبكراً ويحوّل الباقي إلى ترميز
+      // في الصفحة. القاعدة تُطبَّق دائماً لا حين يُشتبه بالمصدر فقط.
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(data).replace(/</g, '\\u003c'),
+      }}
     />
   );
 }

@@ -40,6 +40,14 @@ export const metadata: Metadata = {
     'خطابات حكومية',
   ],
   authors: [{ name: site.name }],
+  /**
+   * الرابط المعياري — يمنع تشتّت الأرشفة حين يصل الزائر بمعاملات تتبّع
+   * (`?utm_source=…`) أو عبر نسخة www مقابل الجذر. النسبي `'/'` يُحلّ
+   * على `metadataBase`، فلا نطاق مكتوب في الشيفرة.
+   */
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
     type: 'website',
     locale: site.locale,
@@ -60,7 +68,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f766e',
+  // أخضر العلامة — نفس `--color-brand-600` بعد تحويله إلى sRGB.
+  // كان `#0f766e` (فيروزي) لا يطابق أي لون في نظام التصميم.
+  themeColor: '#0e6f52',
   width: 'device-width',
   initialScale: 1,
 };

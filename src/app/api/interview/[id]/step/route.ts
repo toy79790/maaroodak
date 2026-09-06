@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { jsonOk, jsonError, zodFieldErrors } from '@/lib/api/response';
+import { assertSameOrigin } from '@/lib/security/cors';
 import { assertUser } from '@/lib/auth/guards';
 import { errors } from '@/lib/api/errors';
 import { goToStep } from '@/features/interview/service';
@@ -12,6 +13,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ) {
   try {
+    assertSameOrigin(request);
     const { user } = await assertUser();
     const { id } = await context.params;
 
