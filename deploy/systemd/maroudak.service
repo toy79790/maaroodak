@@ -1,0 +1,70 @@
+# ==============================================================================
+#  وحدة خدمة «معروضك» — تُوضع في /etc/systemd/system/maroudak.service
+#
+#  تشغّل خرج `output: 'standalone'` مباشرة: خادم Node واحد بلا node_modules
+#  كاملة وبلا مدير عمليات إضافي. systemd يتولّى إعادة التشغيل والسجلات.
+# ==============================================================================
+
+[Unit]
+Description=معروضك — منصة المعاريض
+Documentation=https://github.com/toy79790/maaroodak
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=maroudak
+Group=maroudak
+
+# `current` رابط رمزي إلى الإصدار العامل. تبديله + إعادة التشغيل = نشر.
+WorkingDirectory=/srv/maroudak/current
+ExecStart=/usr/bin/node server.js
+
+# ملف البيئة خارج مجلد الإصدار: لا يُستبدل مع كل نشر، ولا يدخل Git أبداً.
+EnvironmentFile=/srv/maroudak/shared/.env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+
+# ⚠️ 127.0.0.1 لا 0.0.0.0: التطبيق لا يُصغي إلا لـNginx على الجهاز نفسه.
+# الإصغاء العام يعني أن مَن يعرف المنفذ يتجاوز الوكيل وتحديد المعدّل معه.
+
+Restart=always
+RestartSec=3
+# لا تدخل حلقة إعادة تشغيل لا نهائية على عطل دائم.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# --- تقييد الصلاحيات ----------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+# ProtectSystem=strict يجعل النظام كله للقراءة فقط؛ نفتح ما يحتاجه فعلاً.
+ReadWritePaths=/srv/maroudak/shared
+
+# --- حدود الموارد -------------------------------------------------------------
+# الجهاز ١٢ جيجا وتشاركه PostgreSQL. السقف يمنع تسريب ذاكرة من ابتلاع القاعدة.
+MemoryMax=3G
+MemoryHigh=2G
+LimitNOFILE=65535
+
+# --- السجلات ------------------------------------------------------------------
+# اللوغر يُخرج JSON مهيكلاً؛ journald يلتقطه ويمكن شحنه لاحقاً بلا تغيير كود.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=maroudak
+
+[Install]
+WantedBy=multi-user.target
