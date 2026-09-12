@@ -64,8 +64,35 @@ function answerToText(question: QuestionDef, value: unknown): TemplateValue {
   return typeof value === 'number' ? value : String(value);
 }
 
+/** هل للإجابة قيمة فعلية؟ الفراغ والمسافات وحدها ليست إجابة. */
+function hasValue(value: TemplateValue): boolean {
+  return value !== null && value !== undefined && String(value).trim() !== '';
+}
+
 export function buildTemplateContext(source: VariableSource): TemplateContext {
   const now = source.now ?? new Date();
+
+  const byKey = new Map(source.questions.map((question) => [question.key, question]));
+
+  // الإجابات أولاً: بيانات الهوية أدناه تحتاج أن تقرأها.
+  const answered = new Map<string, TemplateValue>();
+
+  for (const [key, value] of Object.entries(source.answers)) {
+    const question = byKey.get(key);
+    if (!question) continue;
+    answered.set(key, answerToText(question, value));
+  }
+
+  /**
+   * بيانات الهوية: إجابة المقابلة تتقدّم على الملف الشخصي — docs/DECISIONS.md #D-034
+   *
+   * المعروض يُرفع عن صاحب الطلب لا عن صاحب الحساب، وهما قد يختلفان.
+   * والملف قد يكون ناقصاً أصلاً، فيسقط سطر من خانة البيانات رغم أن المستخدم أجاب عنه.
+   */
+  function identity(key: string, profile: string | null | undefined): TemplateValue {
+    const answer = answered.get(key);
+    return hasValue(answer) ? (answer as TemplateValue) : (profile ?? null);
+  }
 
   const context: TemplateContext = {
     today: formatArabicDate(now),
@@ -79,22 +106,15 @@ export function buildTemplateContext(source: VariableSource): TemplateContext {
     request_type_name: source.requestType.name,
     subject: source.subject,
 
-    full_name: source.user.name,
-    national_id: source.user.nationalId ?? null,
-    phone: source.user.phone ?? null,
-    city: source.user.city ?? null,
+    full_name: identity('full_name', source.user.name),
+    national_id: identity('national_id', source.user.nationalId),
+    phone: identity('phone', source.user.phone),
+    city: identity('city', source.user.city),
 
     ai_body: source.aiBody ?? '',
   };
 
-  const byKey = new Map(source.questions.map((question) => [question.key, question]));
-
-  for (const [key, value] of Object.entries(source.answers)) {
-    const question = byKey.get(key);
-    if (!question) continue;
-
-    const text = answerToText(question, value);
-
+  for (const [key, text] of answered) {
     // متاح بالبادئة وبدونها. القوالب تُكتب من لوحة التحكم، وتقييد الكاتب
     // على بادئة واحدة مصدر أخطاء صامتة (متغيّر لا يُستبدل).
     context[`a.${key}`] = text;
