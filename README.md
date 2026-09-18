@@ -1,4 +1,4 @@
-# معروضك
+# معروضي
 
 منصة عربية لإنشاء المعاريض والخطابات الرسمية عبر **مقابلة ذكية** ثم صياغة
 بالذكاء الاصطناعي — مع ضمان صريح بألّا يُخترع أي معلومة لم يقدّمها المستخدم.
@@ -47,7 +47,8 @@ ANTHROPIC_API_KEY="sk-ant-..."
 | `npm run check:env` | يتحقق من حراس إعدادات الإنتاج |
 | `npm run db:start` · `db:stop` · `db:status` | قاعدة البيانات المحلية |
 | `npm run db:migrate` · `db:deploy` · `db:seed` · `db:studio` | الترحيلات والبذور |
-| `npm test` · `test:unit` · `test:integration` | الاختبارات |
+| `npm test` · `test:unit` · `test:integration` | الاختبارات (Vitest) |
+| `npm run test:e2e` | اختبارات المتصفح (Playwright على Edge المثبّت) — تتطلب القاعدة والبذور |
 
 توليد سرّ الجلسة:
 
@@ -59,19 +60,18 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 ## النشر
 
-المشروع جاهز للنشر على أي منصة تدعم Next.js، وقابل للربط بأي نطاق —
-**لا نطاق مكتوب داخل الشيفرة**، كله من `NEXT_PUBLIC_APP_URL`.
+الإنتاج على **خادم واحد في Oracle Cloud — جدة** (بقاء البيانات داخل السعودية،
+#D-033) بالنطاق `maroody.com`: Nginx + Node (systemd) + PostgreSQL على الجهاز
+نفسه، ونسخ احتياطي يومي.
 
 | الوثيقة | المحتوى |
 |---|---|
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | من مشروع محلي إلى نطاق يعمل — خطوة بخطوة |
+| [deploy/README.md](deploy/README.md) | **الدليل المعتمد**: الخادم · DNS · HTTPS · أول نشر · النسخ الاحتياطي · Google |
 | [ENVIRONMENT.md](docs/ENVIRONMENT.md) | كل متغيّر بيئة ودوره ومتى يلزم |
 | [PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) | قائمة ما قبل الإطلاق |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | البديل المُدار (Vercel + Neon) — غير معتمد حالياً |
 
-```bash
-DATABASE_URL="<الإنتاج>" npx prisma migrate deploy
-curl -s https://your-domain.com/api/health | jq
-```
+**لا نطاق ولا سرّ داخل الشيفرة** — كله من متغيرات البيئة (`.env.example`).
 
 ---
 
@@ -87,7 +87,7 @@ src/
   features/     وحدات المنتج (auth · interview · letters · admin · marketing)
   services/     ❤️ منطق الأعمال النقي — لا يعرف Next.js ولا Prisma
   lib/          البنية التحتية (db · auth · security · api)
-tests/    unit · integration (على PostgreSQL حقيقية)
+tests/    unit · integration (على PostgreSQL حقيقية) · e2e (Playwright)
 ```
 
 **المبدأ الحاكم:** كل ما هو جوهري — محرك الأسئلة، الشروط، القوالب، بناء
@@ -121,11 +121,11 @@ tests/    unit · integration (على PostgreSQL حقيقية)
 
 ## الحالة
 
-الاختبارات: **116 ناجحاً** (وحدة + تكامل على PostgreSQL حقيقية).
+الاختبارات: **124** وحدة وتكامل (على PostgreSQL حقيقية) + **28** اختبار متصفح (سطح المكتب والجوال).
 حالة المراحل الـ13 وما تبقّى: [docs/PROJECT_PLAN.md §4](docs/PROJECT_PLAN.md).
 
 **قبل الإطلاق التجاري** راجع
 [PRODUCTION_CHECKLIST.md §17](docs/PRODUCTION_CHECKLIST.md) — فيه ما لم
-يُنفَّذ عمداً في v1 (بوابة الدفع · إرسال البريد · تحديد المعدّل عبر Redis).
+يُنفَّذ عمداً في v1 (بوابة الدفع · فرض الحصة الشهرية · تحديد المعدّل عبر Redis).
 
 **إخلاء مسؤولية:** المنصة تساعد في صياغة الخطابات ولا تقدّم استشارة قانونية.

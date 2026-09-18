@@ -282,20 +282,27 @@ export function Pricing() {
 
 /* -------------------------------------------------------------------------- */
 
+/** قائمة الأسئلة وحدها — تُستخدم في قسم الرئيسية وفي صفحة /faq. */
+export function FaqList() {
+  return (
+    <Accordion type="single" collapsible className="w-full">
+      {FAQ_ITEMS.map((item, index) => (
+        <AccordionItem key={item.question} value={`item-${index}`}>
+          <AccordionTrigger>{item.question}</AccordionTrigger>
+          <AccordionContent>{item.answer}</AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+}
+
 export function Faq() {
   return (
     <Section id="faq">
       <SectionHeading title="أسئلة قد تدور في ذهنك" />
 
       <div className="mx-auto max-w-3xl">
-        <Accordion type="single" collapsible className="w-full">
-          {FAQ_ITEMS.map((item, index) => (
-            <AccordionItem key={item.question} value={`item-${index}`}>
-              <AccordionTrigger>{item.question}</AccordionTrigger>
-              <AccordionContent>{item.answer}</AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+        <FaqList />
       </div>
     </Section>
   );

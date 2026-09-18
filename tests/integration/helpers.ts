@@ -73,7 +73,8 @@ export async function createCatalog(): Promise<CatalogFixture> {
     data: {
       slug: `dept-${suffix}`,
       name: 'جهة اختبارية',
-      category: 'GOVERNMENT',
+      // يُدرجها ترحيل الفئات نفسه، فهي موجودة في قاعدة الاختبار بلا بذور.
+      categoryId: 'cat_government',
       addressee: 'معالي وزير الاختبار',
       honorific: 'معالي',
     },

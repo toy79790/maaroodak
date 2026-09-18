@@ -7,17 +7,21 @@ import {
 } from '@/features/admin/components/department-form';
 import { PageHeader } from '@/components/shared/states';
 import { BackLink } from '@/features/admin/components/admin-form';
+import { listCategoryOptions } from '@/features/admin/queries';
 
 export const metadata: Metadata = { title: 'جهة جديدة' };
 
 export default async function NewDepartmentPage() {
   await requirePermission('department:manage');
 
-  const requestTypes = await prisma.requestType.findMany({
-    where: { deletedAt: null, isActive: true },
-    orderBy: { order: 'asc' },
-    select: { id: true, name: true },
-  });
+  const [requestTypes, categories] = await Promise.all([
+    prisma.requestType.findMany({
+      where: { deletedAt: null, isActive: true },
+      orderBy: { order: 'asc' },
+      select: { id: true, name: true },
+    }),
+    listCategoryOptions(),
+  ]);
 
   return (
     <>
@@ -26,7 +30,11 @@ export default async function NewDepartmentPage() {
         title="جهة جديدة"
         description="ستظهر للمستخدمين فور الحفظ بلا حاجة إلى نشر."
       />
-      <DepartmentForm initial={EMPTY_DEPARTMENT} requestTypes={requestTypes} />
+      <DepartmentForm
+        initial={EMPTY_DEPARTMENT}
+        requestTypes={requestTypes}
+        categories={categories}
+      />
     </>
   );
 }

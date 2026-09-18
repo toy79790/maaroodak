@@ -22,7 +22,7 @@ export const departmentSchema = z.object({
   slug,
   name: arabicText(120, 'الاسم'),
   nameEn: z.string().trim().max(120).optional().default(''),
-  category: z.enum(['GOVERNMENT', 'SERVICE', 'EDUCATION', 'PRIVATE', 'OTHER']),
+  categoryId: z.string().trim().min(1, 'اختر فئة الجهة'),
   description: z.string().trim().max(500).optional().default(''),
   honorific: z.string().trim().max(60).optional().default(''),
   addressee: z.string().trim().max(160).optional().default(''),
@@ -32,6 +32,17 @@ export const departmentSchema = z.object({
   requestTypeIds: z.array(z.string()).default([]),
 });
 export type DepartmentInput = z.infer<typeof departmentSchema>;
+
+// --- فئات الجهات ------------------------------------------------------------
+
+export const categorySchema = z.object({
+  slug,
+  name: arabicText(80, 'الاسم'),
+  description: z.string().trim().max(300).optional().default(''),
+  order: z.number().int().min(0).max(9999).default(0),
+  isActive: z.boolean().default(true),
+});
+export type CategoryInput = z.infer<typeof categorySchema>;
 
 // --- أنواع الطلبات ----------------------------------------------------------
 

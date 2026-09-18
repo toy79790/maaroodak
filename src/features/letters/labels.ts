@@ -34,14 +34,6 @@ export const VERSION_SOURCE_LABEL: Record<VersionSource | string, string> = {
   RESTORED: 'استعادة نسخة',
 };
 
-export const DEPARTMENT_CATEGORY_LABEL: Record<string, string> = {
-  GOVERNMENT: 'جهات حكومية',
-  SERVICE: 'جهات خدمية',
-  EDUCATION: 'جهات تعليمية',
-  PRIVATE: 'جهات خاصة',
-  OTHER: 'أخرى',
-};
-
 export const QUESTION_TYPE_LABEL: Record<string, string> = {
   TEXT: 'نص قصير',
   TEXTAREA: 'نص طويل',

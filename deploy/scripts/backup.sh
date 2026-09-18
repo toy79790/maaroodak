@@ -24,7 +24,9 @@ FILE="$BACKUP_DIR/maroudak-$STAMP.dump"
 mkdir -p "$BACKUP_DIR"
 
 # --format=custom يتيح استعادة انتقائية وضغطاً داخلياً — أفضل من SQL خام.
-pg_dump "$DATABASE_URL" --format=custom --no-owner --file="$FILE"
+# ⚠️ نحذف معاملات الاستعلام: `?schema=public` يخصّ Prisma، وlibpq يرفضه
+#    بـ«invalid URI query parameter» فتفشل كل نسخة بصمت في المؤقّت.
+pg_dump "${DATABASE_URL%%\?*}" --format=custom --no-owner --file="$FILE"
 
 SIZE=$(stat -c%s "$FILE")
 [[ "$SIZE" -gt 10000 ]] || { echo "النسخة صغيرة بشكل مريب ($SIZE بايت) — أُلغيت." >&2; rm -f "$FILE"; exit 1; }
@@ -51,8 +53,10 @@ echo "تمّت: $FILE ($(numfmt --to=iec "$SIZE"))"
 # ==============================================================================
 #  الاستعادة — اختبرها مرة قبل أن تحتاجها
 #
-#    createdb maroudak_restore_test
-#    pg_restore --dbname=maroudak_restore_test --clean --if-exists ملف.dump
-#    psql -d maroudak_restore_test -c 'SELECT count(*) FROM "Letter";'
-#    dropdb maroudak_restore_test
+#    sudo -u postgres createdb -O maroudak maroudak_restore_test
+#    sudo -u postgres pg_restore --dbname=maroudak_restore_test --no-owner --role=maroudak ملف.dump
+#    sudo -u postgres psql -d maroudak_restore_test -c 'SELECT count(*) FROM "Letter";'
+#    sudo -u postgres dropdb maroudak_restore_test
+#
+#  الخطوات الكاملة (ومنها الاستعادة الفعلية): deploy/README.md §10
 # ==============================================================================

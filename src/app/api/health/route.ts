@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { appEnv, isAIConfigured, env } from '@/config/env';
 import { getStorage, StorageError } from '@/services/storage';
+import { isMailConfigured } from '@/lib/mail/mailer';
 
 /**
  * الفحص الصحي — docs/DEPLOYMENT.md §10
@@ -52,6 +53,11 @@ function checkAi(): CheckResult {
   return { status: isAIConfigured ? 'ok' : 'not_configured' };
 }
 
+/** البريد: `not_configured` لا يُسقط الصحة، لكنه يعني أن «نسيت كلمة المرور» لا تصل. */
+function checkMail(): CheckResult {
+  return { status: isMailConfigured ? 'ok' : 'not_configured' };
+}
+
 function checkStorage(): CheckResult {
   try {
     return { status: getStorage().isReady ? 'ok' : 'not_configured' };
@@ -69,7 +75,12 @@ function checkStorage(): CheckResult {
 export async function GET(): Promise<NextResponse> {
   const startedAt = Date.now();
 
-  const [database, ai, storage] = [await checkDatabase(), checkAi(), checkStorage()];
+  const [database, ai, mail, storage] = [
+    await checkDatabase(),
+    checkAi(),
+    checkMail(),
+    checkStorage(),
+  ];
 
   const healthy = database.status === 'ok';
 
@@ -80,7 +91,7 @@ export async function GET(): Promise<NextResponse> {
       // نسخة البناء تساعد على تأكيد أن النشر وصل فعلاً.
       version: env.APP_ENV === 'development' ? 'dev' : (process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'unknown'),
       uptimeSeconds: Math.round(process.uptime()),
-      checks: { database, ai, storage },
+      checks: { database, ai, mail, storage },
       durationMs: Date.now() - startedAt,
     },
     {

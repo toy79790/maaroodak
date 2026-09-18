@@ -83,9 +83,14 @@ export const SYSTEM_SETTINGS: ReadonlyArray<{
   value: unknown;
   category: string;
 }> = [
-  { key: 'platform.name', value: 'معروضك', category: 'general' },
+  { key: 'platform.name', value: 'معروضي', category: 'general' },
   { key: 'platform.logoUrl', value: '', category: 'general' },
-  { key: 'platform.supportEmail', value: 'support@maroudak.sa', category: 'general' },
+  // من البيئة لا من الشيفرة (#D-026) — فارغاً يتراجع التطبيق إلى NEXT_PUBLIC_SUPPORT_EMAIL.
+  {
+    key: 'platform.supportEmail',
+    value: process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() ?? '',
+    category: 'general',
+  },
   { key: 'credits.signupBonus', value: 3, category: 'credits' },
   { key: 'credits.costs.generate', value: 1, category: 'credits' },
   { key: 'credits.costs.aiTool', value: 1, category: 'credits' },

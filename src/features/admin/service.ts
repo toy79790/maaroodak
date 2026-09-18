@@ -8,6 +8,7 @@ import { validateTemplate } from '@/services/templates/engine';
 import { SYSTEM_VARIABLES } from '@/services/templates/variables';
 import { invalidateSettingsCache } from '@/lib/db/repositories/settings-repository';
 import type {
+  CategoryInput,
   DepartmentInput,
   PromptInput,
   QuestionInput,
@@ -77,11 +78,20 @@ export async function saveDepartment(
     );
   }
 
+  const category = await prisma.departmentCategory.findUnique({
+    where: { id: input.categoryId },
+    select: { id: true },
+  });
+
+  if (!category) {
+    return fail(errors.validation({ categoryId: 'الفئة غير موجودة.' }, 'فئة غير صالحة.'));
+  }
+
   const data = {
     slug: input.slug,
     name: input.name,
     nameEn: input.nameEn || null,
-    category: input.category,
+    categoryId: input.categoryId,
     description: input.description || null,
     honorific: input.honorific || null,
     addressee: input.addressee || null,
@@ -92,7 +102,7 @@ export async function saveDepartment(
   const before = id
     ? await prisma.department.findUnique({
         where: { id },
-        select: { slug: true, name: true, category: true, order: true, isActive: true },
+        select: { slug: true, name: true, categoryId: true, order: true, isActive: true },
       })
     : null;
 
@@ -153,6 +163,83 @@ export async function deleteDepartment(
   });
 
   await audit(context, 'department.delete', 'Department', id, { letters }, null);
+  return ok(null);
+}
+
+// ---------------------------------------------------------------------------
+// فئات الجهات — #D-036
+// ---------------------------------------------------------------------------
+
+export async function saveCategory(
+  context: AdminContext,
+  input: CategoryInput,
+  id?: string,
+): Promise<Result<{ id: string }>> {
+  const duplicate = await prisma.departmentCategory.findFirst({
+    where: { slug: input.slug, ...(id ? { NOT: { id } } : {}) },
+    select: { id: true },
+  });
+
+  if (duplicate) {
+    return fail(errors.validation({ slug: 'هذا المعرّف مستخدم لفئة أخرى.' }, 'معرّف مكرر.'));
+  }
+
+  const data = {
+    slug: input.slug,
+    name: input.name,
+    description: input.description || null,
+    order: input.order,
+    isActive: input.isActive,
+  };
+
+  const before = id
+    ? await prisma.departmentCategory.findUnique({
+        where: { id },
+        select: { slug: true, name: true, order: true, isActive: true },
+      })
+    : null;
+
+  if (id && !before) return fail(errors.notFound('الفئة غير موجودة.'));
+
+  const record = id
+    ? await prisma.departmentCategory.update({ where: { id }, data, select: { id: true } })
+    : await prisma.departmentCategory.create({ data, select: { id: true } });
+
+  await audit(
+    context,
+    id ? 'category.update' : 'category.create',
+    'DepartmentCategory',
+    record.id,
+    before,
+    data,
+  );
+
+  return ok({ id: record.id });
+}
+
+/**
+ * حذف نهائي، لكن لفئة فارغة فقط. الجهات المحذوفة حذفاً ناعماً تبقى مرتبطة
+ * بفئتها (المفتاح الأجنبي Restrict)، فتُحسب هنا أيضاً — والبديل للمسؤول هو
+ * التعطيل، الذي يُخفي الفئة وجهاتها دون أن يمسّ شيئاً.
+ */
+export async function deleteCategory(
+  context: AdminContext,
+  id: string,
+): Promise<Result<null>> {
+  const departments = await prisma.department.count({ where: { categoryId: id } });
+
+  if (departments > 0) {
+    return fail(
+      errors.conflict(
+        `لا يمكن حذف فئة مرتبطة بـ ${departments} جهة (بما فيها المحذوفة). انقل الجهات إلى فئة أخرى، أو عطّل الفئة بدل حذفها.`,
+      ),
+    );
+  }
+
+  const deleted = await prisma.departmentCategory.deleteMany({ where: { id } });
+  if (deleted.count === 0) return fail(errors.notFound('الفئة غير موجودة.'));
+
+  await audit(context, 'category.delete', 'DepartmentCategory', id, null, null);
   return ok(null);
 }
 

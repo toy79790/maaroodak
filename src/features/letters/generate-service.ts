@@ -19,6 +19,7 @@ import { assertCanSpend, spend } from '@/services/credits/credit-service';
 import { recordFailure, recordUsages } from '@/services/ai/usage-tracker';
 import { recordEvent } from '@/services/analytics/analytics-service';
 import { AppError, errors, fail, ok, type Result } from '@/lib/api/errors';
+import { logger } from '@/lib/logging/logger';
 import { getSettings } from '@/lib/db/repositories/settings-repository';
 import { textToHtml } from '@/features/letters/html';
 import type { QualityReport } from '@/services/ai/schemas';
@@ -55,12 +56,10 @@ export async function generateLetter(
   const provider = getProvider();
 
   if (!provider.isConfigured) {
-    return fail(
-      new AppError('AI_NOT_CONFIGURED', {
-        message:
-          'خدمة الذكاء الاصطناعي غير مُهيّأة. أضف ANTHROPIC_API_KEY في إعدادات الخادم.',
-      }),
-    );
+    // اسم المتغيّر للمشغّل في السجل، لا للمستخدم في الواجهة: تفصيل داخلي
+    // لا يفيد الزائر، ويكشف بنية الخادم.
+    logger.error('التوليد متوقف: ANTHROPIC_API_KEY غير مضبوط', { scope: 'ai' });
+    return fail(new AppError('AI_NOT_CONFIGURED'));
   }
 
   // --- 1) الجلسة والملكية ---------------------------------------------------

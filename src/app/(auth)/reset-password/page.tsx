@@ -2,7 +2,11 @@ import type { Metadata } from 'next';
 import { AuthShell } from '@/features/auth/components/auth-shell';
 import { ResetPasswordForm } from '@/features/auth/components/reset-password-form';
 
-export const metadata: Metadata = { title: 'تعيين كلمة مرور جديدة' };
+export const metadata: Metadata = {
+  title: 'تعيين كلمة مرور جديدة',
+  // الرابط يحمل رمز الاستعادة في الاستعلام — لا يُفهرس ولا يُتبع.
+  robots: { index: false, follow: false },
+};
 
 export default async function ResetPasswordPage({
   searchParams,

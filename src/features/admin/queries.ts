@@ -172,6 +172,29 @@ export { getFunnel };
 // إدارة الكتالوج
 // ---------------------------------------------------------------------------
 
+/** خيارات الفئة لنموذج الجهة — المعطّلة تبقى ظاهرة حتى لا تفقد جهةٌ فئتها الحالية. */
+export async function listCategoryOptions() {
+  return prisma.departmentCategory.findMany({
+    orderBy: [{ order: 'asc' }, { name: 'asc' }],
+    select: { id: true, name: true, isActive: true },
+  });
+}
+
+export async function listCategoriesAdmin() {
+  return prisma.departmentCategory.findMany({
+    orderBy: [{ order: 'asc' }, { name: 'asc' }],
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      description: true,
+      order: true,
+      isActive: true,
+      _count: { select: { departments: { where: { deletedAt: null } } } },
+    },
+  });
+}
+
 export async function listDepartmentsAdmin() {
   return prisma.department.findMany({
     where: { deletedAt: null },
@@ -180,7 +203,7 @@ export async function listDepartmentsAdmin() {
       id: true,
       slug: true,
       name: true,
-      category: true,
+      category: { select: { name: true } },
       isActive: true,
       order: true,
       organizationId: true,

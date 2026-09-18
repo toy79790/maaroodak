@@ -9,58 +9,47 @@ import {
   Pricing,
   SupportedDepartments,
 } from '@/features/marketing/components/sections';
-import { FAQ_ITEMS } from '@/features/marketing/content';
+import { JsonLd } from '@/components/shared/json-ld';
 import { site } from '@/config/site';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
-/** بيانات منظّمة — تُحسّن ظهور الأسئلة الشائعة في نتائج البحث. */
-function StructuredData() {
-  const data = [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'WebApplication',
-      name: site.name,
-      url: site.url,
-      applicationCategory: 'BusinessApplication',
-      inLanguage: 'ar',
-      description: site.description,
-      offers: {
-        '@type': 'Offer',
-        price: '0',
-        priceCurrency: 'SAR',
-      },
+/**
+ * بيانات منظّمة للرئيسية. `FAQPage` انتقل إلى /faq: Google يعتمد ترميز
+ * الأسئلة الشائعة من صفحة واحدة، وتكراره في صفحتين يُضعفه لا يقوّيه.
+ */
+const STRUCTURED_DATA = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: site.name,
+    alternateName: site.nameEn,
+    url: site.url,
+    inLanguage: 'ar',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: site.name,
+    url: site.url,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    inLanguage: 'ar',
+    description: site.description,
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'SAR',
     },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'FAQPage',
-      mainEntity: FAQ_ITEMS.map((item) => ({
-        '@type': 'Question',
-        name: item.question,
-        acceptedAnswer: { '@type': 'Answer', text: item.answer },
-      })),
-    },
-  ];
-
-  return (
-    <script
-      type="application/ld+json"
-      // محتوى ثابت من الخادم، لا مدخلات مستخدم. ومع ذلك يُهرَّب `<`:
-      // نصّ يحوي `</script>` يغلق الوسم مبكراً ويحوّل الباقي إلى ترميز
-      // في الصفحة. القاعدة تُطبَّق دائماً لا حين يُشتبه بالمصدر فقط.
-      dangerouslySetInnerHTML={{
-        __html: JSON.stringify(data).replace(/</g, '\\u003c'),
-      }}
-    />
-  );
-}
+  },
+];
 
 export default function HomePage() {
   return (
     <>
-      <StructuredData />
+      <JsonLd data={STRUCTURED_DATA} />
       <Hero />
       <HowItWorks />
       <Features />

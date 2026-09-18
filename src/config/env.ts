@@ -86,7 +86,9 @@ const serverSchema = z.object({
   SENTRY_DSN: optionalString,
 
   // --- البريد ---------------------------------------------------------------
-  MAIL_FROM: z.string().optional().default('no-reply@maroudak.sa'),
+  /** عنوان المرسِل. فارغاً يُشتق `no-reply@<النطاق>` من NEXT_PUBLIC_APP_URL. */
+  MAIL_FROM: optionalString,
+  /** smtps://user:pass@host:465 — بدونه لا يُرسل بريد (روابط الاستعادة تُسجَّل في التطوير فقط). */
   SMTP_URL: optionalString,
 });
 
@@ -122,9 +124,14 @@ function assertProductionSafety(env: ServerEnv): void {
     problems.push('NEXT_PUBLIC_APP_URL يشير إلى localhost.');
   }
 
-  if (env.DATABASE_URL.includes('localhost')) {
+  /*
+   * نرفض **قاعدة التطوير** تحديداً لا كل `localhost`: على خادم Oracle تعمل
+   * PostgreSQL على المضيف نفسه (#D-033)، فرفض localhost كان يُسقط كل إقلاع
+   * إنتاج. بصمة قاعدة التطوير: المنفذ 5433 أو بيانات الاعتماد الافتراضية.
+   */
+  if (/:5433\//.test(env.DATABASE_URL) || /\/\/postgres:postgres@/.test(env.DATABASE_URL)) {
     problems.push(
-      'DATABASE_URL يشير إلى localhost — تأكد أنك لا تستخدم قاعدة التطوير في الإنتاج.',
+      'DATABASE_URL يطابق قاعدة التطوير (المنفذ 5433 أو postgres:postgres) — استخدم قاعدة الإنتاج ومستخدماً بكلمة مرور قوية.',
     );
   }
 

@@ -17,6 +17,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Check,
+  Copy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,14 +25,43 @@ import { Input } from '@/components/ui/input';
 import { PaperPreview } from '@/features/letters/components/paper-preview';
 import { QualityPanel, type GuardrailWarning } from '@/features/letters/components/quality-panel';
 import { AiToolbar } from '@/features/letters/components/ai-toolbar';
-import {
-  LetterEditor,
-  type LetterEditorHandle,
-} from '@/features/letters/components/letter-editor';
+import type { LetterEditorHandle } from '@/features/letters/components/letter-editor';
 import { api, ApiError } from '@/lib/api/client';
 import { cn } from '@/lib/utils/cn';
+import { htmlToText } from '@/features/letters/html';
 import { AI_TOOL_LABELS, type AiTool } from '@/features/letters/ai-tools';
 import type { QualityReport } from '@/services/ai/schemas';
+
+/**
+ * المحرر يُحمَّل عند الحاجة لا مع الصفحة.
+ *
+ * TipTap و ProseMirror تقاربان نصف ميجابايت غير مضغوطة، والوضع الافتراضي
+ * هنا **المعاينة** لا التحرير — فأكثر الزوار لا يفتحون المحرر إطلاقاً، وكانوا
+ * يدفعون ثمن تنزيله وتفسيره في كل مرة.
+ *
+ * `React.lazy` لا `next/dynamic`: المكوّن يُمرَّر إليه `ref` (لأمر الحفظ
+ * والتحديد)، و`lazy` يمرّر الـref إلى مكوّن `forwardRef` بينما غلاف
+ * `next/dynamic` يبتلعه.
+ */
+const LetterEditor = React.lazy(() =>
+  import('@/features/letters/components/letter-editor').then((module) => ({
+    default: module.LetterEditor,
+  })),
+);
+
+/** هيكل بمقاس المحرر — يمنع قفزة التخطيط أثناء التحميل. */
+function EditorSkeleton() {
+  return (
+    <div className="surface-card animate-pulse p-6" aria-hidden>
+      <div className="h-9 w-full rounded-[var(--radius-field)] bg-surface-muted" />
+      <div className="mt-4 space-y-3">
+        {['w-full', 'w-11/12', 'w-full', 'w-10/12', 'w-full', 'w-9/12'].map((width) => (
+          <div key={width} className={cn('h-3 rounded-full bg-surface-muted', width)} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * مساحة عمل المعروض: معاينة ورقية · تحرير · أدوات ذكاء اصطناعي · تصدير.
@@ -333,6 +363,20 @@ export function LetterWorkspace({
         </div>
 
         <div className="ms-auto flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              // المسودة الحالية لا المحفوظة: ما يراه المستخدم هو ما يُنسخ.
+              navigator.clipboard
+                .writeText(htmlToText(draftHtml))
+                .then(() => toast.success('نُسخ نص المعروض'))
+                .catch(() => toast.error('تعذّر النسخ — حدّد النص وانسخه يدوياً.'));
+            }}
+          >
+            <Copy className="size-4" />
+            نسخ النص
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => window.print()}>
             <Printer className="size-4" />
             طباعة / PDF
@@ -351,12 +395,14 @@ export function LetterWorkspace({
         <PaperPreview contentHtml={draftHtml} />
       ) : (
         <div className="grid gap-5 lg:grid-cols-[1fr_20rem]">
-          <LetterEditor
-            ref={editorRef}
-            initialHtml={letter.contentHtml}
-            onChange={setDraftHtml}
-            onSelectionChange={setSelection}
-          />
+          <React.Suspense fallback={<EditorSkeleton />}>
+            <LetterEditor
+              ref={editorRef}
+              initialHtml={letter.contentHtml}
+              onChange={setDraftHtml}
+              onSelectionChange={setSelection}
+            />
+          </React.Suspense>
 
           <div className="space-y-4">
             <AiToolbar

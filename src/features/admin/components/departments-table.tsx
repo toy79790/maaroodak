@@ -8,7 +8,6 @@ import { Building2, Pencil, Trash2, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable, type Column } from '@/features/admin/components/data-table';
-import { DEPARTMENT_CATEGORY_LABEL } from '@/features/letters/labels';
 import { api, ApiError } from '@/lib/api/client';
 
 export interface DepartmentRow {
@@ -73,10 +72,10 @@ export function DepartmentsTable({ rows }: { rows: readonly DepartmentRow[] }) {
     {
       key: 'category',
       header: 'الفئة',
-      searchText: (row) => DEPARTMENT_CATEGORY_LABEL[row.category] ?? row.category,
+      searchText: (row) => row.category,
       cell: (row) => (
         <Badge tone="neutral">
-          {DEPARTMENT_CATEGORY_LABEL[row.category] ?? row.category}
+          {row.category}
         </Badge>
       ),
     },

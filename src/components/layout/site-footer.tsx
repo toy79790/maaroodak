@@ -8,9 +8,17 @@ const FOOTER_SECTIONS = [
     title: 'المنصة',
     links: [
       { href: '/#how-it-works', label: 'كيف تعمل' },
-      { href: '/#features', label: 'المميزات' },
-      { href: '/#departments', label: 'الجهات المدعومة' },
+      { href: '/departments', label: 'الجهات المدعومة' },
+      { href: '/request-types', label: 'أنواع المعاريض' },
       { href: '/#pricing', label: 'الأسعار' },
+    ],
+  },
+  {
+    title: 'عن المنصة',
+    links: [
+      { href: '/about', label: 'من نحن' },
+      { href: '/faq', label: 'الأسئلة الشائعة' },
+      { href: '/contact', label: 'تواصل معنا' },
     ],
   },
   {
@@ -35,7 +43,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface-muted/50">
       <Container>
-        <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
             <Logo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">

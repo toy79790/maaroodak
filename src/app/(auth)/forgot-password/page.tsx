@@ -4,7 +4,10 @@ import { AuthShell } from '@/features/auth/components/auth-shell';
 import { ForgotPasswordForm } from '@/features/auth/components/forgot-password-form';
 import { requireGuest } from '@/lib/auth/guards';
 
-export const metadata: Metadata = { title: 'استعادة كلمة المرور' };
+export const metadata: Metadata = {
+  title: 'استعادة كلمة المرور',
+  robots: { index: false, follow: false },
+};
 
 export default async function ForgotPasswordPage() {
   await requireGuest();

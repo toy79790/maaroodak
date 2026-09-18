@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Cairo, Amiri } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { site } from '@/config/site';
+import { publicEnv } from '@/config/public-env';
+import { GoogleAnalytics } from '@/components/analytics/google-analytics';
 import { cn } from '@/lib/utils/cn';
 import './globals.css';
 
@@ -40,18 +42,16 @@ export const metadata: Metadata = {
     'خطابات حكومية',
   ],
   authors: [{ name: site.name }],
-  /**
-   * الرابط المعياري — يمنع تشتّت الأرشفة حين يصل الزائر بمعاملات تتبّع
-   * (`?utm_source=…`) أو عبر نسخة www مقابل الجذر. النسبي `'/'` يُحلّ
-   * على `metadataBase`، فلا نطاق مكتوب في الشيفرة.
+  /*
+   * لا `alternates.canonical` هنا: القيمة في التخطيط الجذري تُورَّث لكل صفحة
+   * لا تحدّد رابطها، فكانت /login و/register تعلن أن رابطها المعياري هو
+   * الرئيسية — أي «لا تفهرسني، فهرس الرئيسية بدلي». كل صفحة عامة تحدّد
+   * رابطها بنفسها، والنسبي يُحلّ على `metadataBase` فلا نطاق في الشيفرة.
    */
-  alternates: {
-    canonical: '/',
-  },
   openGraph: {
     type: 'website',
     locale: site.locale,
-    url: site.url,
+    url: '/',
     siteName: site.name,
     title: `${site.name} — ${site.tagline}`,
     description: site.description,
@@ -65,6 +65,10 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  // Search Console: يكفي ضبط NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ثم إعادة البناء.
+  ...(publicEnv.googleSiteVerification
+    ? { verification: { google: publicEnv.googleSiteVerification } }
+    : {}),
 };
 
 export const viewport: Viewport = {
@@ -97,6 +101,7 @@ export default function RootLayout({
           closeButton
           toastOptions={{ className: 'font-sans' }}
         />
+        <GoogleAnalytics />
       </body>
     </html>
   );

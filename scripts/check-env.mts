@@ -50,6 +50,25 @@ const SCENARIOS: Scenario[] = [
     expect: 'fail',
   },
   {
+    // Oracle: القاعدة على المضيف نفسه (#D-033، #D-038) — يجب أن تُقبل.
+    name: 'قبول قاعدة إنتاج على localhost:5432',
+    env: {
+      ...BASE,
+      APP_ENV: 'production',
+      DATABASE_URL: 'postgresql://maroudak:Str0ng-Pass@localhost:5432/maroudak?schema=public',
+    },
+    expect: 'pass',
+  },
+  {
+    name: 'رفض قاعدة التطوير في الإنتاج',
+    env: {
+      ...BASE,
+      APP_ENV: 'production',
+      DATABASE_URL: 'postgresql://postgres:postgres@localhost:5433/maroudak?schema=public',
+    },
+    expect: 'fail',
+  },
+  {
     name: 'رفض التخزين السحابي بلا بيانات اعتماد',
     env: { ...BASE, APP_ENV: 'production', STORAGE_DRIVER: 's3' },
     expect: 'fail',

@@ -28,16 +28,31 @@ function canonicalHost(): string | null {
    ترويسات الأمان — docs/SECURITY.md §7 و §8
    ========================================================================== */
 
+/**
+ * Google Analytics يُضيف نطاقاته إلى CSP **فقط** حين يُضبط معرّفه (#D-037):
+ * بلا تحليلات تبقى السياسة `self` صرفة كما كانت.
+ */
+const hasAnalytics = /^G-[A-Z0-9]{4,20}$/.test(
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() ?? '',
+);
+const gaScript = hasAnalytics ? ' https://www.googletagmanager.com' : '';
+const gaConnect = hasAnalytics
+  ? ' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com'
+  : '';
+const gaImg = hasAnalytics
+  ? ' https://*.google-analytics.com https://www.googletagmanager.com'
+  : '';
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   // 'unsafe-eval' لازم لـ React Refresh في التطوير فقط.
   isDev
-    ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
-    : "script-src 'self' 'unsafe-inline'",
+    ? `script-src 'self' 'unsafe-eval' 'unsafe-inline'${gaScript}`
+    : `script-src 'self' 'unsafe-inline'${gaScript}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `img-src 'self' data: blob:${gaImg}`,
   "font-src 'self' data:",
-  "connect-src 'self'",
+  `connect-src 'self'${gaConnect}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -73,7 +88,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   experimental: {
-    optimizePackageImports: ['lucide-react', 'date-fns', 'recharts'],
+    optimizePackageImports: ['lucide-react', 'date-fns'],
   },
 
   images: {

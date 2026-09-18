@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma';
 import { DepartmentForm } from '@/features/admin/components/department-form';
 import { PageHeader } from '@/components/shared/states';
 import { BackLink } from '@/features/admin/components/admin-form';
+import { listCategoryOptions } from '@/features/admin/queries';
 
 export const metadata: Metadata = { title: 'تعديل الجهة' };
 
@@ -16,14 +17,14 @@ export default async function EditDepartmentPage({
   await requirePermission('department:manage');
   const { id } = await params;
 
-  const [department, requestTypes] = await Promise.all([
+  const [department, requestTypes, categories] = await Promise.all([
     prisma.department.findFirst({
       where: { id, deletedAt: null },
       select: {
         slug: true,
         name: true,
         nameEn: true,
-        category: true,
+        categoryId: true,
         description: true,
         honorific: true,
         addressee: true,
@@ -40,6 +41,7 @@ export default async function EditDepartmentPage({
       orderBy: { order: 'asc' },
       select: { id: true, name: true },
     }),
+    listCategoryOptions(),
   ]);
 
   if (!department) notFound();
@@ -52,11 +54,12 @@ export default async function EditDepartmentPage({
       <DepartmentForm
         departmentId={id}
         requestTypes={requestTypes}
+        categories={categories}
         initial={{
           slug: department.slug,
           name: department.name,
           nameEn: department.nameEn ?? '',
-          category: department.category,
+          categoryId: department.categoryId,
           description: department.description ?? '',
           honorific: department.honorific ?? '',
           addressee: department.addressee ?? '',

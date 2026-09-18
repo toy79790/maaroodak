@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/shared/states';
 import { api, ApiError } from '@/lib/api/client';
 import { searchKey } from '@/lib/utils/arabic';
-import { DEPARTMENT_CATEGORY_LABEL } from '@/features/letters/labels';
 import { cn } from '@/lib/utils/cn';
 import type { InterviewData } from '@/features/interview/components/interview-wizard';
 
@@ -225,7 +224,7 @@ export function StartPicker({
           {grouped.map(([category, items]) => (
             <section key={category}>
               <h2 className="mb-3 text-sm font-semibold text-muted-foreground">
-                {DEPARTMENT_CATEGORY_LABEL[category] ?? category}
+                {category}
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 {items.map((department) => (

@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
+import { pageMetadata } from '@/config/seo';
 import Link from 'next/link';
 import { AuthShell } from '@/features/auth/components/auth-shell';
 import { RegisterForm } from '@/features/auth/components/register-form';
 import { requireGuest } from '@/lib/auth/guards';
 
-export const metadata: Metadata = { title: 'إنشاء حساب' };
+export const metadata: Metadata = pageMetadata({
+  title: 'إنشاء حساب',
+  description: 'أنشئ حساباً مجانياً وابدأ كتابة معروضك الأول في دقائق.',
+  path: '/register',
+});
 
 export default async function RegisterPage() {
   await requireGuest();

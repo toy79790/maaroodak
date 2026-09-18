@@ -14,7 +14,6 @@ import {
   useFormErrors,
 } from '@/features/admin/components/admin-form';
 import { api, ApiError } from '@/lib/api/client';
-import { DEPARTMENT_CATEGORY_LABEL } from '@/features/letters/labels';
 import { cn } from '@/lib/utils/cn';
 import { searchKey } from '@/lib/utils/arabic';
 
@@ -22,7 +21,7 @@ export interface DepartmentFormValue {
   slug: string;
   name: string;
   nameEn: string;
-  category: string;
+  categoryId: string;
   description: string;
   honorific: string;
   addressee: string;
@@ -35,7 +34,7 @@ export const EMPTY_DEPARTMENT: DepartmentFormValue = {
   slug: '',
   name: '',
   nameEn: '',
-  category: 'GOVERNMENT',
+  categoryId: '',
   description: '',
   honorific: 'سعادة',
   addressee: '',
@@ -44,19 +43,25 @@ export const EMPTY_DEPARTMENT: DepartmentFormValue = {
   requestTypeIds: [],
 };
 
-const CATEGORIES = ['GOVERNMENT', 'SERVICE', 'EDUCATION', 'PRIVATE', 'OTHER'];
-
 export function DepartmentForm({
   initial,
   departmentId,
   requestTypes,
+  categories,
 }: {
   initial: DepartmentFormValue;
   departmentId?: string;
   requestTypes: ReadonlyArray<{ id: string; name: string }>;
+  /** الفئات من القاعدة — تُدار من /admin/categories. */
+  categories: ReadonlyArray<{ id: string; name: string; isActive: boolean }>;
 }) {
   const router = useRouter();
-  const [value, setValue] = React.useState(initial);
+  // جهة جديدة بلا فئة: أول فئة مُفعّلة افتراضياً بدل قائمة فارغة الاختيار.
+  const [value, setValue] = React.useState(() => ({
+    ...initial,
+    categoryId:
+      initial.categoryId || (categories.find((c) => c.isActive) ?? categories[0])?.id || '',
+  }));
   const [pending, setPending] = React.useState(false);
   const [typeQuery, setTypeQuery] = React.useState('');
   const { formError, fieldErrors, reset, apply } = useFormErrors();
@@ -145,17 +150,17 @@ export function DepartmentForm({
             )}
           </FormField>
 
-          <FormField id="d-category" label="الفئة" error={fieldErrors.category} required>
+          <FormField id="d-category" label="الفئة" error={fieldErrors.categoryId} required>
             {(props) => (
               <select
                 {...props}
-                value={value.category}
-                onChange={(event) => set('category', event.target.value)}
+                value={value.categoryId}
+                onChange={(event) => set('categoryId', event.target.value)}
                 className={adminSelectClass}
               >
-                {CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {DEPARTMENT_CATEGORY_LABEL[category] ?? category}
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.isActive ? category.name : `${category.name} (معطّلة)`}
                   </option>
                 ))}
               </select>

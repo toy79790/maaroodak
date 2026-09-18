@@ -1,6 +1,10 @@
 import { PrismaClient, type Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { DEPARTMENTS } from './seed-data/departments';
+import {
+  DEPARTMENTS,
+  DEPARTMENT_CATEGORIES,
+  type DepartmentCategorySlug,
+} from './seed-data/departments';
 import { REQUEST_TYPES } from './seed-data/request-types';
 import { QUESTIONS, type QuestionSeed } from './seed-data/questions';
 import { TEMPLATES } from './seed-data/templates';
@@ -59,6 +63,32 @@ async function upsertSystemRecord<TCreate, TUpdate>(
    الجهات وأنواع الطلبات
    ========================================================================== */
 
+/** المعرّف الثابت للفئة — نفسه الذي يُدرجه الترحيل (`cat_<slug>`). */
+function categoryId(slug: DepartmentCategorySlug): string {
+  return `cat_${slug}`;
+}
+
+/**
+ * الفئات: إنشاء ما ينقص فقط. `update: {}` عمداً — الاسم والترتيب والتفعيل
+ * يملكها المسؤول من اللوحة بعد الإنشاء، والبذر لا يمحو تعديله.
+ */
+async function seedCategories(): Promise<void> {
+  for (const category of DEPARTMENT_CATEGORIES) {
+    await prisma.departmentCategory.upsert({
+      where: { slug: category.slug },
+      create: {
+        id: categoryId(category.slug),
+        slug: category.slug,
+        name: category.name,
+        order: category.order,
+      },
+      update: {},
+    });
+  }
+
+  log(`✓ ${DEPARTMENT_CATEGORIES.length} فئات جهات`);
+}
+
 async function seedRequestTypes(): Promise<Map<string, string>> {
   const ids = new Map<string, string>();
 
@@ -103,7 +133,7 @@ async function seedDepartments(
         slug: seed.slug,
         name: seed.name,
         nameEn: seed.nameEn ?? null,
-        category: seed.category,
+        categoryId: categoryId(seed.category),
         description: seed.description,
         honorific: seed.honorific,
         addressee: seed.addressee,
@@ -112,7 +142,7 @@ async function seedDepartments(
       {
         name: seed.name,
         nameEn: seed.nameEn ?? null,
-        category: seed.category,
+        categoryId: categoryId(seed.category),
         description: seed.description,
         honorific: seed.honorific,
         addressee: seed.addressee,
@@ -436,9 +466,22 @@ async function seedSettings(): Promise<void> {
 }
 
 async function seedAccounts(): Promise<void> {
-  const isProduction = process.env.NODE_ENV === 'production';
-  if (isProduction) {
-    log('· تخطّي الحسابات التجريبية (بيئة إنتاج)');
+  /*
+   * الحسابات التجريبية بكلمات مرور معروفة — وجودها في الإنتاج = باب خلفي.
+   * لذلك **قائمة سماح لا منع**: لا تُنشأ إلا على قاعدة التطوير نفسها (بصمتها
+   * في src/config/env.ts: المنفذ 5433 أو postgres:postgres)، وفي بيئة غير
+   * منشورة. الفحص القديم (`NODE_ENV === 'production'`) كان يُنشئها لو شُغّل
+   * البذر على الخادم دون تحميل ملف البيئة.
+   */
+  const databaseUrl = process.env.DATABASE_URL ?? '';
+  const isDevDatabase =
+    /:5433\//.test(databaseUrl) || /\/\/postgres:postgres@/.test(databaseUrl);
+  const isDeployedEnv =
+    process.env.NODE_ENV === 'production' ||
+    ['production', 'staging'].includes(process.env.APP_ENV ?? '');
+
+  if (!isDevDatabase || isDeployedEnv) {
+    log('· تخطّي الحسابات التجريبية (بيئة منشورة أو ليست قاعدة التطوير)');
     return;
   }
 
@@ -497,8 +540,9 @@ async function seedAccounts(): Promise<void> {
    ========================================================================== */
 
 async function main(): Promise<void> {
-  console.log('\n🌱 بذر بيانات «معروضك»\n');
+  console.log('\n🌱 بذر بيانات «معروضي»\n');
 
+  await seedCategories();
   const requestTypeIds = await seedRequestTypes();
   const departmentIds = await seedDepartments(requestTypeIds);
   await seedQuestions(departmentIds, requestTypeIds);

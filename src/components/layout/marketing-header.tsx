@@ -8,12 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Container } from '@/components/ui/container';
 import { cn } from '@/lib/utils/cn';
 
+/**
+ * روابط الأقسام تبدأ بـ`/`: الرابط `#features` وحده لا يعمل إلا في الرئيسية،
+ * والترويسة نفسها تظهر في كل الصفحات العامة.
+ */
 const NAV_LINKS = [
-  { href: '#how-it-works', label: 'كيف تعمل' },
-  { href: '#features', label: 'المميزات' },
-  { href: '#departments', label: 'الجهات' },
-  { href: '#pricing', label: 'الأسعار' },
-  { href: '#faq', label: 'الأسئلة الشائعة' },
+  { href: '/#how-it-works', label: 'كيف تعمل' },
+  { href: '/#features', label: 'المميزات' },
+  { href: '/departments', label: 'الجهات' },
+  { href: '/#pricing', label: 'الأسعار' },
+  { href: '/faq', label: 'الأسئلة الشائعة' },
 ] as const;
 
 export function MarketingHeader() {

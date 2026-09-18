@@ -45,7 +45,10 @@ export interface DepartmentSummary {
   id: string;
   slug: string;
   name: string;
+  /** اسم الفئة للعرض — الفئات تُدار من اللوحة (#D-036). */
   category: string;
+  /** ترتيب الفئة — يرتّب مجموعات العرض لا الجهات داخلها. */
+  categoryOrder: number;
   description: string | null;
   addressee: string | null;
   honorific: string | null;
@@ -56,13 +59,19 @@ export async function listDepartments(
   scope: TenantScope,
 ): Promise<DepartmentSummary[]> {
   const departments = await prisma.department.findMany({
-    where: { AND: [tenantFilter(scope)], isActive: true, deletedAt: null },
-    orderBy: [{ order: 'asc' }, { name: 'asc' }],
+    // الفئة المعطّلة تُخفي جهاتها عن المستخدمين دون أن تمسّ الجهات نفسها.
+    where: {
+      AND: [tenantFilter(scope)],
+      isActive: true,
+      deletedAt: null,
+      category: { isActive: true },
+    },
+    orderBy: [{ category: { order: 'asc' } }, { order: 'asc' }, { name: 'asc' }],
     select: {
       id: true,
       slug: true,
       name: true,
-      category: true,
+      category: { select: { name: true, order: true } },
       description: true,
       addressee: true,
       honorific: true,
@@ -74,7 +83,8 @@ export async function listDepartments(
     id: department.id,
     slug: department.slug,
     name: department.name,
-    category: department.category,
+    category: department.category.name,
+    categoryOrder: department.category.order,
     description: department.description,
     addressee: department.addressee,
     honorific: department.honorific,
@@ -89,7 +99,7 @@ export async function getDepartment(scope: TenantScope, id: string) {
       id: true,
       slug: true,
       name: true,
-      category: true,
+      category: { select: { name: true } },
       description: true,
       addressee: true,
       honorific: true,
@@ -303,4 +313,106 @@ export async function loadQuestionBundle(
   });
 
   return { questions, conditions };
+}
+
+// ---------------------------------------------------------------------------
+// الكتالوج العام — صفحتا /departments و /request-types (بلا تسجيل دخول)
+// ---------------------------------------------------------------------------
+
+/**
+ * سجلات النظام وحدها (`organizationId = null`): الزائر بلا منظمة، وكتالوج
+ * منظمة بعينها ليس للعرض العام. وبنفس شروط الظهور للمستخدم المسجّل: جهة
+ * مفعّلة غير محذوفة، وفئة مفعّلة.
+ */
+export interface PublicCategory {
+  slug: string;
+  name: string;
+  description: string | null;
+  departments: Array<{
+    slug: string;
+    name: string;
+    description: string | null;
+    requestTypes: string[];
+  }>;
+}
+
+export async function listPublicDepartments(): Promise<PublicCategory[]> {
+  const categories = await prisma.departmentCategory.findMany({
+    where: { isActive: true },
+    orderBy: [{ order: 'asc' }, { name: 'asc' }],
+    select: {
+      slug: true,
+      name: true,
+      description: true,
+      departments: {
+        where: { organizationId: null, isActive: true, deletedAt: null },
+        orderBy: [{ order: 'asc' }, { name: 'asc' }],
+        select: {
+          slug: true,
+          name: true,
+          description: true,
+          requestTypes: {
+            where: { isActive: true, requestType: { isActive: true, deletedAt: null } },
+            orderBy: { order: 'asc' },
+            select: { requestType: { select: { name: true } } },
+          },
+        },
+      },
+    },
+  });
+
+  return categories
+    .filter((category) => category.departments.length > 0)
+    .map((category) => ({
+      slug: category.slug,
+      name: category.name,
+      description: category.description,
+      departments: category.departments.map((department) => ({
+        slug: department.slug,
+        name: department.name,
+        description: department.description,
+        requestTypes: department.requestTypes.map((link) => link.requestType.name),
+      })),
+    }));
+}
+
+export interface PublicRequestType {
+  slug: string;
+  name: string;
+  description: string | null;
+  departmentCount: number;
+}
+
+/** أنواع الطلبات المرتبطة بجهة واحدة ظاهرة على الأقل — النوع اليتيم لا يُعرض. */
+export async function listPublicRequestTypes(): Promise<PublicRequestType[]> {
+  const types = await prisma.requestType.findMany({
+    where: { organizationId: null, isActive: true, deletedAt: null },
+    orderBy: [{ order: 'asc' }, { name: 'asc' }],
+    select: {
+      slug: true,
+      name: true,
+      description: true,
+      departments: {
+        where: {
+          isActive: true,
+          department: {
+            organizationId: null,
+            isActive: true,
+            deletedAt: null,
+            category: { isActive: true },
+          },
+        },
+        select: { id: true },
+      },
+    },
+  });
+
+  return types
+    .filter((type) => type.departments.length > 0)
+    .map((type) => ({
+      slug: type.slug,
+      name: type.name,
+      description: type.description,
+      departmentCount: type.departments.length,
+    }));
 }

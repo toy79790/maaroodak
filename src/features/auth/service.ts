@@ -15,7 +15,8 @@ import {
   PASSWORD_RESET_TTL_MINUTES,
   SIGNUP_BONUS_CREDITS,
 } from '@/config/constants';
-import { isDevelopment, env } from '@/config/env';
+import { absoluteUrl, isDevelopment } from '@/config/env';
+import { passwordResetMessage, sendMail } from '@/lib/mail/mailer';
 import type {
   ForgotPasswordInput,
   LoginInput,
@@ -157,7 +158,7 @@ export async function forgotPassword(
 ): Promise<Result<ForgotPasswordResult>> {
   const user = await prisma.user.findUnique({
     where: { email: input.email },
-    select: { id: true, isActive: true },
+    select: { id: true, email: true, isActive: true },
   });
 
   // الرد ناجح دائماً — لا نكشف ما إن كان البريد مسجّلاً.
@@ -177,14 +178,20 @@ export async function forgotPassword(
     }),
   ]);
 
-  const resetUrl = `${env.APP_URL}/reset-password?token=${token}`;
+  // `absoluteUrl` لا `env.APP_URL`: الأخير اختياري وفارغ عادةً، فكان الرابط
+  // يخرج نسبياً بلا نطاق — لا يُفتح من البريد.
+  const resetUrl = absoluteUrl(`/reset-password?token=${token}`);
 
   if (isDevelopment) {
     console.info(`\n[dev] رابط استعادة كلمة المرور:\n${resetUrl}\n`);
     return ok({ devResetUrl: resetUrl });
   }
 
-  // TODO(mail): إرسال البريد عبر SMTP_URL عند تهيئته.
+  /*
+   * بلا `await` عمداً: انتظار خادم SMTP يجعل الرد أبطأ حين يكون البريد مسجّلاً،
+   * فيكشف التوقيت ما يُخفيه الرد الموحّد. `sendMail` لا يرمي، ويسجّل فشله.
+   */
+  void sendMail(passwordResetMessage(user.email, resetUrl, PASSWORD_RESET_TTL_MINUTES));
   return ok({});
 }
 

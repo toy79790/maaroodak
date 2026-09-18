@@ -1,0 +1,48 @@
+<!--
+  مصدر صورة المشاركة src/app/opengraph-image.png (1200×630).
+  لإعادة توليدها بعد تعديل النص أو الأرقام (Edge مثبّت على ويندوز افتراضياً):
+
+    msedge --headless=new --hide-scrollbars --force-device-scale-factor=1 ^
+      --window-size=1200,630 --virtual-time-budget=10000 ^
+      --user-data-dir=%TEMP%\og-edge --screenshot=%CD%\src\app\opengraph-image.png ^
+      file:///%CD%/scripts/assets/og-image.html
+
+  الأرقام (٢٨ جهة · ٢١ نوع طلب) ثابتة هنا — حدّثها يدوياً إن تغيّر الكتالوج كثيراً.
+-->
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700&display=block" rel="stylesheet">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: oklch(0.99 0.004 90);
+    color: #1c1b19;
+    position: relative;
+  }
+  .bar { position: absolute; top: 0; bottom: 0; right: 0; width: 16px; background: oklch(0.52 0.12 165); }
+  .wrap { position: absolute; inset: 0 96px 0 96px; }
+  .brand { position: absolute; top: 78px; right: 0; display: flex; align-items: center; gap: 20px; }
+  .mark { width: 64px; height: 64px; border-radius: 14px; background: oklch(0.52 0.12 165); color: #fff;
+          display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 38px; line-height: 1; padding-bottom: 6px; box-sizing: border-box; }
+  .name { font-size: 40px; font-weight: 700; }
+  h1 { position: absolute; top: 196px; right: 0; margin: 0; font-size: 92px; font-weight: 700; line-height: 1.25; white-space: nowrap; letter-spacing: 0; }
+  .sub { position: absolute; top: 335px; right: 0; margin: 0; font-size: 36px; font-weight: 500; color: oklch(0.58 0.012 90); }
+  .rule { position: absolute; top: 478px; right: 0; left: 0; height: 2px; background: #e7e5df; }
+  .stats { position: absolute; top: 508px; right: 0; display: flex; gap: 64px; font-size: 30px; font-weight: 500; color: #5c5a55; }
+</style>
+</head>
+<body>
+  <div class="bar"></div>
+  <div class="wrap">
+    <div class="brand"><div class="mark">م</div><div class="name">معروضي</div></div>
+    <h1>اكتب معروضك في دقائق</h1>
+    <p class="sub">أجب عن أسئلة بسيطة، ودع الذكاء الاصطناعي يصوغ خطابك الرسمي</p>
+    <div class="rule"></div>
+    <div class="stats"><span>٢٨ جهة</span><span>٢١ نوع طلب</span><span>لا يخترع معلومات</span></div>
+  </div>
+</body>
+</html>

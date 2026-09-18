@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
+import { pageMetadata } from '@/config/seo';
 import { LegalPage } from '@/features/marketing/components/legal-page';
 import { AI_DISCLAIMER_SECTIONS } from '@/features/marketing/legal-content';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'إخلاء مسؤولية الذكاء الاصطناعي',
-  alternates: { canonical: '/ai-disclaimer' },
-};
+  description: 'كيف يعمل الذكاء الاصطناعي في المنصة، وما الذي يُمنع من فعله، وما الذي نفحصه قبل عرض المعروض عليك.',
+  path: '/ai-disclaimer',
+});
 
 export default function AiDisclaimerPage() {
   return (

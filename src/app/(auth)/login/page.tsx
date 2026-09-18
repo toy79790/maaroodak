@@ -1,10 +1,15 @@
 import type { Metadata } from 'next';
+import { pageMetadata } from '@/config/seo';
 import Link from 'next/link';
 import { AuthShell } from '@/features/auth/components/auth-shell';
 import { LoginForm } from '@/features/auth/components/login-form';
 import { requireGuest } from '@/lib/auth/guards';
 
-export const metadata: Metadata = { title: 'تسجيل الدخول' };
+export const metadata: Metadata = pageMetadata({
+  title: 'تسجيل الدخول',
+  description: 'سجّل الدخول إلى حسابك لمتابعة معاريضك.',
+  path: '/login',
+});
 
 export default async function LoginPage({
   searchParams,

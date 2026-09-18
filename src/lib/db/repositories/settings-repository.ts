@@ -2,6 +2,7 @@ import 'server-only';
 
 import { prisma } from '@/lib/db/prisma';
 import { AI_DEFAULTS, CREDIT_COSTS, SIGNUP_BONUS_CREDITS } from '@/config/constants';
+import { site } from '@/config/site';
 import type { EffortLevel } from '@/services/ai/ports';
 
 /**
@@ -74,8 +75,8 @@ export async function getSettings(): Promise<AppSettings> {
   const map = new Map(rows.map((row) => [row.key, row.value]));
 
   const value: AppSettings = {
-    platformName: asString(map.get('platform.name'), 'معروضك'),
-    supportEmail: asString(map.get('platform.supportEmail'), 'support@maroudak.sa'),
+    platformName: asString(map.get('platform.name'), site.name),
+    supportEmail: asString(map.get('platform.supportEmail'), site.supportEmail),
 
     signupBonusCredits: asNumber(
       map.get('credits.signupBonus'),

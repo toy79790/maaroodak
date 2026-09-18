@@ -6,8 +6,8 @@
 import { publicEnv } from '@/config/public-env';
 
 export const site = {
-  name: 'معروضك',
-  nameEn: 'Maroudak',
+  name: 'معروضي',
+  nameEn: 'Maroody',
   tagline: 'اكتب معروضك في دقائق',
   description:
     'أجب عن عدة أسئلة بسيطة، ودع الذكاء الاصطناعي يساعدك في صياغة خطاب رسمي مناسب لطلبك.',

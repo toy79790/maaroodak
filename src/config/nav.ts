@@ -18,6 +18,7 @@ export type NavIconName =
   | 'credits'
   | 'settings'
   | 'departments'
+  | 'categories'
   | 'requestTypes'
   | 'questions'
   | 'conditions'
@@ -74,6 +75,12 @@ export const ADMIN_NAV: readonly NavGroup[] = [
         icon: 'departments',
         permission: 'department:manage',
         matchNested: true,
+      },
+      {
+        href: '/admin/categories',
+        label: 'فئات الجهات',
+        icon: 'categories',
+        permission: 'department:manage',
       },
       {
         href: '/admin/request-types',

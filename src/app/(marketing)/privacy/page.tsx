@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
+import { pageMetadata } from '@/config/seo';
 import { LegalPage } from '@/features/marketing/components/legal-page';
 import { PRIVACY_SECTIONS } from '@/features/marketing/legal-content';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'سياسة الخصوصية',
-  alternates: { canonical: '/privacy' },
-};
+  description: 'ما البيانات التي نجمعها، ولماذا، وما الذي لا نسجّله، وكيف تحذف بياناتك متى شئت.',
+  path: '/privacy',
+});
 
 export default function PrivacyPage() {
   return (

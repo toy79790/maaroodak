@@ -6,7 +6,7 @@ import {
   Paragraph,
   TextRun,
 } from 'docx';
-import { AI_DISCLAIMER } from '@/config/site';
+import { AI_DISCLAIMER, site } from '@/config/site';
 
 /**
  * تصدير DOCX عربي — docs/DECISIONS.md #D-009
@@ -169,7 +169,7 @@ export async function buildDocx(input: DocxInput): Promise<Buffer> {
   }
 
   const document = new Document({
-    creator: 'معروضك',
+    creator: site.name,
     title: input.title,
     description: 'خطاب رسمي',
     styles: {

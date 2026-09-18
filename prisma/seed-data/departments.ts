@@ -1,4 +1,3 @@
-import type { DepartmentCategory } from '@prisma/client';
 
 /**
  * كتالوج الجهات.
@@ -8,11 +7,26 @@ import type { DepartmentCategory } from '@prisma/client';
  * سياقه عليهما.
  */
 
+/**
+ * الفئات الأولية — تطابق ما يُدرجه ترحيل 20260917000000_department_categories
+ * بمعرّفاتها نفسها (`cat_<slug>`)، فالبذر على قاعدة مُرحَّلة لا يُكرّرها.
+ */
+export const DEPARTMENT_CATEGORIES = [
+  { slug: 'government', name: 'جهات حكومية', order: 10 },
+  { slug: 'service', name: 'جهات خدمية', order: 20 },
+  { slug: 'education', name: 'جهات تعليمية', order: 30 },
+  { slug: 'private', name: 'جهات خاصة', order: 40 },
+  { slug: 'other', name: 'أخرى', order: 50 },
+] as const;
+
+export type DepartmentCategorySlug = (typeof DEPARTMENT_CATEGORIES)[number]['slug'];
+
 export interface DepartmentSeed {
   slug: string;
   name: string;
   nameEn?: string;
-  category: DepartmentCategory;
+  /** `slug` فئة من DEPARTMENT_CATEGORIES. */
+  category: DepartmentCategorySlug;
   description: string;
   honorific: string;
   addressee: string;
@@ -38,7 +52,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'royal-court',
     name: 'الديوان الملكي',
     nameEn: 'Royal Court',
-    category: 'GOVERNMENT',
+    category: 'government',
     description:
       'الجهة العليا لرفع المعاريض والطلبات الشخصية والإنسانية التي تعذّر حلّها لدى الجهات المختصة.',
     honorific: 'مقام',
@@ -63,7 +77,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'regional-emirates',
     name: 'إمارات المناطق',
     nameEn: 'Regional Emirates',
-    category: 'GOVERNMENT',
+    category: 'government',
     description:
       'إمارة المنطقة — تُرفع إليها الطلبات والشكاوى المحلية وطلبات رفع الضرر والتظلمات.',
     honorific: 'صاحب السمو الملكي',
@@ -84,7 +98,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-interior',
     name: 'وزارة الداخلية',
     nameEn: 'Ministry of Interior',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'الأحوال المدنية، الجوازات، المرور، السجون، والدفاع المدني.',
     honorific: 'معالي',
     addressee: 'معالي وزير الداخلية',
@@ -95,7 +109,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-hrsd',
     name: 'وزارة الموارد البشرية والتنمية الاجتماعية',
     nameEn: 'Ministry of Human Resources and Social Development',
-    category: 'GOVERNMENT',
+    category: 'government',
     description:
       'الضمان الاجتماعي، الدعم، العمل، حقوق العمال، والجمعيات الأهلية.',
     honorific: 'معالي',
@@ -114,7 +128,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-education',
     name: 'وزارة التعليم',
     nameEn: 'Ministry of Education',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'التعليم العام والجامعي، الابتعاث، ومعادلة الشهادات.',
     honorific: 'معالي',
     addressee: 'معالي وزير التعليم',
@@ -133,7 +147,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-health',
     name: 'وزارة الصحة',
     nameEn: 'Ministry of Health',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'الخدمات الصحية، العلاج، التحويل الطبي، والمواعيد.',
     honorific: 'معالي',
     addressee: 'معالي وزير الصحة',
@@ -144,7 +158,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-justice',
     name: 'وزارة العدل',
     nameEn: 'Ministry of Justice',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'المحاكم، كتابة العدل، التنفيذ، والتوثيق.',
     honorific: 'معالي',
     addressee: 'معالي وزير العدل',
@@ -155,7 +169,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-housing',
     name: 'وزارة الإسكان',
     nameEn: 'Ministry of Housing',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'الدعم السكني، الأراضي المجانية، والتمويل العقاري المدعوم.',
     honorific: 'معالي',
     addressee: 'معالي وزير الشؤون البلدية والقروية والإسكان',
@@ -166,7 +180,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-commerce',
     name: 'وزارة التجارة',
     nameEn: 'Ministry of Commerce',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'السجلات التجارية، حماية المستهلك، والمخالفات التجارية.',
     honorific: 'معالي',
     addressee: 'معالي وزير التجارة',
@@ -177,7 +191,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-finance',
     name: 'وزارة المالية',
     nameEn: 'Ministry of Finance',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'الميزانية، المستحقات المالية الحكومية، والمطالبات.',
     honorific: 'معالي',
     addressee: 'معالي وزير المالية',
@@ -188,7 +202,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-transport',
     name: 'وزارة النقل',
     nameEn: 'Ministry of Transport',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'الطرق، النقل العام، والخدمات اللوجستية.',
     honorific: 'معالي',
     addressee: 'معالي وزير النقل والخدمات اللوجستية',
@@ -199,7 +213,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-environment',
     name: 'وزارة البيئة والمياه والزراعة',
     nameEn: 'Ministry of Environment, Water and Agriculture',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'المياه، الزراعة، الثروة الحيوانية، والدعم الزراعي.',
     honorific: 'معالي',
     addressee: 'معالي وزير البيئة والمياه والزراعة',
@@ -210,7 +224,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-islamic-affairs',
     name: 'وزارة الشؤون الإسلامية',
     nameEn: 'Ministry of Islamic Affairs',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'المساجد، الأئمة والمؤذنون، والدعوة والإرشاد.',
     honorific: 'معالي',
     addressee: 'معالي وزير الشؤون الإسلامية والدعوة والإرشاد',
@@ -221,7 +235,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-foreign-affairs',
     name: 'وزارة الخارجية',
     nameEn: 'Ministry of Foreign Affairs',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'التأشيرات، التصديقات، وشؤون المواطنين في الخارج.',
     honorific: 'معالي',
     addressee: 'معالي وزير الخارجية',
@@ -232,7 +246,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-investment',
     name: 'وزارة الاستثمار',
     nameEn: 'Ministry of Investment',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'تراخيص الاستثمار، وتمكين المستثمرين.',
     honorific: 'معالي',
     addressee: 'معالي وزير الاستثمار',
@@ -243,7 +257,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'ministry-tourism',
     name: 'وزارة السياحة',
     nameEn: 'Ministry of Tourism',
-    category: 'GOVERNMENT',
+    category: 'government',
     description: 'تراخيص المنشآت السياحية، والدعم السياحي.',
     honorific: 'معالي',
     addressee: 'معالي وزير السياحة',
@@ -256,7 +270,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'banks',
     name: 'البنوك',
     nameEn: 'Banks',
-    category: 'SERVICE',
+    category: 'service',
     description: 'المصارف — جدولة المديونية، الإعفاء من الرسوم، وتسوية القروض.',
     honorific: 'سعادة',
     addressee: 'سعادة مدير البنك',
@@ -275,7 +289,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'finance-companies',
     name: 'شركات التمويل',
     nameEn: 'Finance Companies',
-    category: 'SERVICE',
+    category: 'service',
     description: 'شركات التمويل والتقسيط — جدولة الأقساط وتسوية المديونية.',
     honorific: 'سعادة',
     addressee: 'سعادة المدير التنفيذي',
@@ -286,7 +300,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'insurance-companies',
     name: 'شركات التأمين',
     nameEn: 'Insurance Companies',
-    category: 'SERVICE',
+    category: 'service',
     description: 'التأمين الصحي والمركبات — المطالبات والاعتراض على الرفض.',
     honorific: 'سعادة',
     addressee: 'سعادة مدير شركة التأمين',
@@ -297,7 +311,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'telecom-companies',
     name: 'شركات الاتصالات',
     nameEn: 'Telecom Companies',
-    category: 'SERVICE',
+    category: 'service',
     description: 'خدمات الاتصالات والإنترنت — الفواتير والاشتراكات والأعطال.',
     honorific: 'سعادة',
     addressee: 'سعادة مدير خدمة العملاء',
@@ -308,7 +322,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'utilities',
     name: 'شركات الكهرباء والمياه',
     nameEn: 'Electricity and Water Companies',
-    category: 'SERVICE',
+    category: 'service',
     description: 'خدمات الكهرباء والمياه — الفواتير والتوصيل والانقطاع.',
     honorific: 'سعادة',
     addressee: 'سعادة مدير الشركة',
@@ -321,7 +335,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'universities',
     name: 'الجامعات',
     nameEn: 'Universities',
-    category: 'EDUCATION',
+    category: 'education',
     description: 'الجامعات والكليات — القبول، التأجيل، الاعتذار، والمنح.',
     honorific: 'معالي',
     addressee: 'معالي مدير الجامعة',
@@ -341,7 +355,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'schools',
     name: 'المدارس',
     nameEn: 'Schools',
-    category: 'EDUCATION',
+    category: 'education',
     description: 'مدارس التعليم العام والأهلي — النقل والقبول والتظلمات.',
     honorific: 'سعادة',
     addressee: 'سعادة مدير المدرسة',
@@ -352,7 +366,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'institutes',
     name: 'المعاهد',
     nameEn: 'Institutes',
-    category: 'EDUCATION',
+    category: 'education',
     description: 'المعاهد والمراكز التدريبية — القبول والرسوم والشهادات.',
     honorific: 'سعادة',
     addressee: 'سعادة مدير المعهد',
@@ -365,7 +379,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'companies',
     name: 'الشركات',
     nameEn: 'Companies',
-    category: 'PRIVATE',
+    category: 'private',
     description: 'شركات القطاع الخاص — التوظيف والترقية والاستقالة والشكاوى.',
     honorific: 'سعادة',
     addressee: 'سعادة المدير التنفيذي',
@@ -376,7 +390,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'organizations',
     name: 'المؤسسات',
     nameEn: 'Organizations',
-    category: 'PRIVATE',
+    category: 'private',
     description: 'المؤسسات والهيئات — الطلبات العامة والتعاون.',
     honorific: 'سعادة',
     addressee: 'سعادة المدير العام',
@@ -387,7 +401,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
     slug: 'charities',
     name: 'الجمعيات الخيرية',
     nameEn: 'Charities',
-    category: 'PRIVATE',
+    category: 'private',
     description: 'الجمعيات الخيرية — طلبات المساعدة والكفالة والدعم.',
     honorific: 'سعادة',
     addressee: 'سعادة رئيس مجلس الإدارة',
@@ -397,7 +411,7 @@ export const DEPARTMENTS: readonly DepartmentSeed[] = [
   {
     slug: 'other',
     name: 'جهة أخرى',
-    category: 'OTHER',
+    category: 'other',
     description: 'لم تجد جهتك؟ اختر هذا الخيار واكتب اسم الجهة بنفسك.',
     honorific: 'سعادة',
     addressee: 'سعادة المسؤول',

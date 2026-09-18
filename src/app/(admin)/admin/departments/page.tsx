@@ -22,7 +22,7 @@ export default async function AdminDepartmentsPage() {
           id: department.id,
           slug: department.slug,
           name: department.name,
-          category: department.category,
+          category: department.category.name,
           isActive: department.isActive,
           order: department.order,
           requestTypeCount: department._count.requestTypes,

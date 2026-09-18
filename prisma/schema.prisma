@@ -1,5 +1,5 @@
 // ============================================================================
-//  معروضك — مخطط قاعدة البيانات
+//  معروضي — مخطط قاعدة البيانات
 //  المرجع الكامل للتصميم والفهارس وسياسات الحذف: docs/DATABASE.md
 // ============================================================================
 
@@ -8,10 +8,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
   // وقت التشغيل: الاتصال المُجمَّع. دوال الاستضافة بلا خادم تفتح اتصالاً
   // لكل استدعاء، والاتصال المباشر ينفد تحت أي حِمل.
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
   // الترحيلات: اتصال مباشر. مُجمِّع Neon (PgBouncer) في وضع المعاملات لا
   // يدعم الأقفال الاستشارية التي يستخدمها Prisma Migrate، فيفشل
   // `migrate deploy` أثناء البناء. انظر docs/DECISIONS.md #D-032
@@ -32,14 +32,6 @@ enum OrgRole {
   OWNER
   ADMIN
   MEMBER
-}
-
-enum DepartmentCategory {
-  GOVERNMENT
-  SERVICE
-  EDUCATION
-  PRIVATE
-  OTHER
 }
 
 enum QuestionType {
@@ -214,20 +206,20 @@ model OrganizationMember {
 // ============================================================================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  name          String
-  phone         String?
-  nationalId    String?
-  city          String?
-  role          UserRole  @default(USER)
-  isActive      Boolean   @default(true)
-  creditBalance Int       @default(0)
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  phone           String?
+  nationalId      String?
+  city            String?
+  role            UserRole  @default(USER)
+  isActive        Boolean   @default(true)
+  creditBalance   Int       @default(0)
   emailVerifiedAt DateTime?
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   sessions            Session[]
   passwordResetTokens PasswordResetToken[]
@@ -249,15 +241,15 @@ model User {
 }
 
 model Session {
-  id        String    @id @default(cuid())
+  id         String    @id @default(cuid())
   /// SHA-256 للرمز — لا نخزّن الرمز نفسه (docs/SECURITY.md §2)
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  ip        String?
-  userAgent String?
-  createdAt DateTime  @default(now())
-  lastSeenAt DateTime @default(now())
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime  @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -284,12 +276,31 @@ model PasswordResetToken {
 //  الكتالوج: الجهات وأنواع الطلبات
 // ============================================================================
 
+/// فئات الجهات — جدول لا `enum` حتى تُدار من لوحة التحكم (#D-036).
+/// عامة للمنصة كلها: التصنيف تنظيم للعرض لا بيانات مستأجر.
+model DepartmentCategory {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  departments Department[]
+
+  @@index([isActive, order])
+}
+
 model Department {
   id          String             @id @default(cuid())
   slug        String
   name        String
   nameEn      String?
-  category    DepartmentCategory
+  /// Restrict: لا تُحذف فئة ما دامت جهة تشير إليها — يُنقل ما تحتها أولاً.
+  categoryId  String
+  category    DepartmentCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   description String?
   logoUrl     String?
   /// صيغة المخاطبة: "معالي وزير الداخلية" — تُستخدم في القالب
@@ -314,7 +325,7 @@ model Department {
 
   @@unique([slug, organizationId])
   @@index([organizationId, isActive, order])
-  @@index([category, isActive])
+  @@index([categoryId, isActive])
 }
 
 model RequestType {
@@ -427,14 +438,14 @@ model QuestionOption {
 /// قاعدة شرطية واحدة تؤثر على سؤال هدف.
 /// clauses: [{ sourceQuestionKey, operator, value }]
 model QuestionCondition {
-  id      String          @id @default(cuid())
-  action  ConditionAction @default(SHOW)
-  logic   ConditionLogic  @default(AND)
-  clauses Json
-  order   Int             @default(0)
-  isActive Boolean        @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id        String          @id @default(cuid())
+  action    ConditionAction @default(SHOW)
+  logic     ConditionLogic  @default(AND)
+  clauses   Json
+  order     Int             @default(0)
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
   targetQuestionId String
   targetQuestion   Question @relation(fields: [targetQuestionId], references: [id], onDelete: Cascade)
@@ -469,7 +480,7 @@ model Template {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  letters       Letter[]
+  letters         Letter[]
   departmentTypes DepartmentRequestType[]
 
   @@unique([slug, organizationId])

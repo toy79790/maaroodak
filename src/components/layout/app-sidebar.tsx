@@ -24,6 +24,7 @@ import {
   BarChart3,
   ScrollText,
   SlidersHorizontal,
+  FolderTree,
   type LucideIcon,
 } from 'lucide-react';
 import { Logo } from '@/components/layout/logo';
@@ -43,6 +44,7 @@ const NAV_ICONS: Record<NavIconName, LucideIcon> = {
   credits: CreditCard,
   settings: Settings,
   departments: Building2,
+  categories: FolderTree,
   requestTypes: ListTree,
   questions: MessageSquareQuote,
   conditions: GitBranch,

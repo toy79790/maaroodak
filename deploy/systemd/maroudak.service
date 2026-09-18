@@ -1,12 +1,12 @@
 # ==============================================================================
-#  وحدة خدمة «معروضك» — تُوضع في /etc/systemd/system/maroudak.service
+#  وحدة خدمة «معروضي» — تُوضع في /etc/systemd/system/maroudak.service
 #
 #  تشغّل خرج `output: 'standalone'` مباشرة: خادم Node واحد بلا node_modules
 #  كاملة وبلا مدير عمليات إضافي. systemd يتولّى إعادة التشغيل والسجلات.
 # ==============================================================================
 
 [Unit]
-Description=معروضك — منصة المعاريض
+Description=معروضي — منصة المعاريض
 Documentation=https://github.com/toy79790/maaroodak
 After=network-online.target postgresql.service
 Wants=network-online.target
