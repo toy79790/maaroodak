@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { AuthShell } from '@/features/auth/components/auth-shell';
 import { LoginForm } from '@/features/auth/components/login-form';
 import { requireGuest } from '@/lib/auth/guards';
+import { safeRedirectPath } from '@/lib/security/safe-redirect';
 
 export const metadata: Metadata = pageMetadata({
   title: 'تسجيل الدخول',
@@ -19,9 +20,8 @@ export default async function LoginPage({
   await requireGuest();
   const { next } = await searchParams;
 
-  // نقبل المسارات الداخلية فقط — منع إعادة توجيه مفتوحة.
-  const redirectTo =
-    next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+  // نقبل المسارات الداخلية فقط — منع إعادة توجيه مفتوحة (#D-043).
+  const redirectTo = safeRedirectPath(next);
 
   return (
     <AuthShell

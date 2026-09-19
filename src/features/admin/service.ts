@@ -703,10 +703,13 @@ export async function updateUser(
           data: { creditBalance: 0 },
         });
       }
+      // يُسجَّل المسحوب فعلاً لا المطلوب: سحب ٥ من رصيد ٢ يسحب ٢ فقط، وتسجيل
+      // ٥ كان يُفسد إعادة اشتقاق الرصيد من الدفتر (reconcile).
+      const previousBalance = updated.creditBalance - amount;
       await prisma.creditTransaction.create({
         data: {
           userId,
-          amount,
+          amount: creditBalance - previousBalance,
           balanceAfter: creditBalance,
           reason: 'ADMIN_ADJUST',
           meta: { note: input.adjustmentNote ?? '', by: context.actorId },
