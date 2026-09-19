@@ -80,14 +80,8 @@ sudo dpkg-reconfigure --priority=low unattended-upgrades
 sudo useradd -r -m -d /srv/maroudak -s /bin/bash maroudak
 sudo -u maroudak mkdir -p /srv/maroudak/{releases,shared,scripts,backups}
 
-# المستودع خاص: الخادم يحتاج مفتاح قراءة فقط (Deploy key) لا حسابك.
-sudo -u maroudak ssh-keygen -t ed25519 -N '' -f /srv/maroudak/.ssh/id_ed25519 -C maroudak-deploy
-sudo -u maroudak cat /srv/maroudak/.ssh/id_ed25519.pub
-# ↑ انسخه إلى: GitHub → المستودع → Settings → Deploy keys → Add deploy key
-#   (اترك «Allow write access» غير محدّد)
-sudo -u maroudak ssh -o StrictHostKeyChecking=accept-new -T git@github.com   # رسالة ترحيب = يعمل
-
-sudo -u maroudak git clone git@github.com:toy79790/maaroodak.git /srv/maroudak/repo
+# المستودع عام: يُنسخ بـHTTPS بلا مفتاح ولا كلمة مرور. الخادم يقرأ فقط ولا يدفع.
+sudo -u maroudak git clone https://github.com/toy79790/maaroodak.git /srv/maroudak/repo
 sudo -u maroudak cp /srv/maroudak/repo/deploy/scripts/*.sh /srv/maroudak/scripts/
 sudo chmod +x /srv/maroudak/scripts/*.sh
 
