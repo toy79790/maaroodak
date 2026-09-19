@@ -129,7 +129,9 @@ sudo chmod 600 /srv/maroudak/shared/.env
 APP_ENV=production
 NODE_ENV=production
 
-NEXT_PUBLIC_APP_URL=https://maroody.com
+# ⭐ النطاق يُكتب هنا فقط — منه يأخذ التطبيق روابطه، ويأخذ nginx-setup.sh إعداد
+#    Nginx والشهادة. الجذر بلا www. البداية المجانية: maroody.duckdns.org
+NEXT_PUBLIC_APP_URL=https://maroody.duckdns.org
 NEXT_PUBLIC_SUPPORT_EMAIL=بريد-الدعم
 
 # ⚠️ none لا www: Nginx يتولّى التوحيد، وضبطهما معاً يعني تحويلاً مزدوجاً.
@@ -146,7 +148,10 @@ ANTHROPIC_API_KEY=
 
 # «نسيت كلمة المرور» لا تعمل بدونه — smtps://USER:PASS@host:465
 SMTP_URL=
-MAIL_FROM=no-reply@maroody.com
+# ⚠️ مع نطاق مجاني: ضع عنواناً موثّقاً لدى مزوّد البريد نفسه (بريدك لديه)،
+#    لا no-reply@maroody.duckdns.org — نطاق لا تملك سجلات SPF/DKIM له يُرفض
+#    أو يذهب إلى البريد المزعج. مع نطاقك الخاص لاحقاً: no-reply@نطاقك.
+MAIL_FROM=
 
 # اختياريان — انظر قسم «Google» أدناه
 NEXT_PUBLIC_GA_MEASUREMENT_ID=
@@ -164,62 +169,65 @@ LOG_LEVEL=info
 ## 7. الخدمة و Nginx (مرحلة التمهيد)
 
 الإعداد الكامل يشير إلى ملفات شهادة لا توجد قبل إصدارها، فيرفضه `nginx -t`.
-لذلك نبدأ بإعداد تمهيدي على المنفذ 80 فقط، يخدم تحدّي Let's Encrypt:
+لذلك نبدأ بإعداد تمهيدي على المنفذ 80 فقط، يخدم تحدّي Let's Encrypt.
+
+ملفات Nginx في المستودع تحمل `__DOMAIN__` مكان النطاق؛ `nginx-setup.sh`
+يستبدله بالنطاق من `NEXT_PUBLIC_APP_URL` في ملف البيئة (الخطوة 6). **لا تنسخ
+ملفات Nginx يدوياً.**
 
 ```bash
 sudo cp /srv/maroudak/repo/deploy/systemd/maroudak.service /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable maroudak
 
-sudo mkdir -p /var/www/certbot
-sudo cp /srv/maroudak/repo/deploy/nginx/00-maroudak-zones.conf /etc/nginx/conf.d/
-sudo cp /srv/maroudak/repo/deploy/nginx/maroudak-bootstrap.conf /etc/nginx/sites-available/maroudak
-sudo ln -sf /etc/nginx/sites-available/maroudak /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
-sudo nginx -t && sudo systemctl reload nginx
+sudo bash /srv/maroudak/repo/deploy/scripts/nginx-setup.sh bootstrap
 ```
 
 ## 8. DNS ثم الشهادة ثم HTTPS
 
-**أ) DNS** — في لوحة مسجّل النطاق (الخطوات التفصيلية لمسجّلك تُكتب عند الشراء):
+**أ) DNS** — اجعل النطاق يشير إلى عنوان IP العام للجهاز (Compute → Instances).
+
+*النطاق المجاني (DuckDNS):* في `duckdns.org` بعد تسجيل الدخول، بجانب
+`maroody`: اكتب عنوان الجهاز في خانة **current ip** ← **update ip**. هذا كل
+شيء — DuckDNS يُحلّ `www.maroody.duckdns.org` تلقائياً إلى العنوان نفسه. عنوان
+Oracle ثابت، فلا حاجة إلى برنامج تحديث دوري. **لا تشارك الـtoken** الظاهر أعلى
+الصفحة: من يملكه يغيّر وجهة نطاقك.
+
+*نطاق خاص (maroody.com لاحقاً):* في لوحة المسجّل:
 
 | النوع | الاسم | القيمة | TTL |
 |---|---|---|---|
-| A | `@` | عنوان IP العام للجهاز (Compute → Instances) | 300 |
+| A | `@` | عنوان IP العام للجهاز | 300 |
 | A | `www` | العنوان نفسه | 300 |
 
 **احذف** أي سجل `A` أو `AAAA` أو `CNAME` موجود مسبقاً على `@` أو `www`
 (صفحات «الدومين للبيع» الافتراضية). **لا تمسّ** سجلات `MX` و`TXT` إن كان لديك
 بريد على النطاق.
 
-انتظر الانتشار **قبل** طلب الشهادة — Let's Encrypt تفشل وتستهلك محاولة إن لم
-يصلها DNS:
+تحقّق قبل طلب الشهادة (ضع نطاقك):
 
 ```bash
-dig +short maroody.com        # يجب أن يطبع عنوان الجهاز
-dig +short www.maroody.com    # والعنوان نفسه
-curl -I http://maroody.com    # 503 «قيد التجهيز» = Nginx التمهيدي يستجيب
+DOMAIN=maroody.duckdns.org
+dig +short $DOMAIN          # يجب أن يطبع عنوان الجهاز
+dig +short www.$DOMAIN      # والعنوان نفسه
+curl -I http://$DOMAIN      # 503 «قيد التجهيز» = Nginx التمهيدي يستجيب
 ```
 
-**ب) الشهادة** — `certonly --webroot` لا `--nginx`: لا نسمح لـcertbot بتعديل
-ملفات Nginx، فيبقى الإعداد في المستودع مصدر الحقيقة:
+**ب) الشهادة** — السكربت يتحقق أولاً أن النطاقين يشيران إلى هذا الجهاز، ثم
+يطلب الشهادة بـ`certonly --webroot` (لا يسمح لـcertbot بتعديل ملفات Nginx):
 
 ```bash
 sudo apt install -y certbot
-sudo certbot certonly --webroot -w /var/www/certbot \
-  -d maroody.com -d www.maroody.com \
-  --email بريدك --agree-tos --no-eff-email \
-  --deploy-hook "systemctl reload nginx"
+sudo bash /srv/maroudak/repo/deploy/scripts/nginx-setup.sh cert بريدك@example.com
 ```
 
-`--deploy-hook` يُحفظ مع الشهادة: كل تجديد تلقائي يُعيد تحميل Nginx بالشهادة
-الجديدة. تحقّق من المؤقّت: `systemctl list-timers | grep certbot`.
+البريد لتنبيهات Let's Encrypt قبل انتهاء الشهادة. التجديد تلقائي، ويُعيد
+تحميل Nginx بعده (`--deploy-hook`). تحقّق من المؤقّت:
+`systemctl list-timers | grep certbot`.
 
-**ج) الإعداد الكامل** — HTTPS، وتحويل `http` و`www` إلى `https://maroody.com`:
+**ج) الإعداد الكامل** — HTTPS، وتحويل `http` و`www` إلى `https://النطاق`:
 
 ```bash
-sudo cp /srv/maroudak/repo/deploy/nginx/maroudak-tls.conf /etc/nginx/snippets/
-sudo cp /srv/maroudak/repo/deploy/nginx/maroudak.conf /etc/nginx/sites-available/maroudak
-sudo nginx -t && sudo systemctl reload nginx
+sudo bash /srv/maroudak/repo/deploy/scripts/nginx-setup.sh full
 ```
 
 ## 9. أول نشر
@@ -245,11 +253,30 @@ sudo -u postgres psql -d maroudak -c \
 **تحقّق من HTTPS:**
 
 ```bash
-curl -sI http://maroody.com      | grep -i '^location'   # https://maroody.com/
-curl -sI https://www.maroody.com | grep -i '^location'   # https://maroody.com/
-curl -sI https://maroody.com     | grep -i strict-transport
-curl -s  https://maroody.com/api/health
+DOMAIN=maroody.duckdns.org
+curl -sI http://$DOMAIN      | grep -i '^location'   # https://$DOMAIN/
+curl -sI https://www.$DOMAIN | grep -i '^location'   # https://$DOMAIN/
+curl -sI https://$DOMAIN     | grep -i strict-transport
+curl -s  https://$DOMAIN/api/health
 ```
+
+## 9ب. تغيير النطاق لاحقاً (maroody.duckdns.org → maroody.com)
+
+الشيفرة لا تحوي أي نطاق، فالانتقال إعدادات فقط:
+
+1. **DNS:** سجلّا `A` في لوحة المسجّل (الجدول في 8-أ).
+2. **ملف البيئة:** `NEXT_PUBLIC_APP_URL=https://maroody.com` و`MAIL_FROM=no-reply@maroody.com`
+   (بعد توثيق النطاق لدى مزوّد البريد).
+3. **الشهادة ثم Nginx ثم البناء** — بهذا الترتيب:
+   ```bash
+   sudo bash /srv/maroudak/repo/deploy/scripts/nginx-setup.sh cert بريدك@example.com
+   sudo bash /srv/maroudak/repo/deploy/scripts/nginx-setup.sh full
+   sudo -u maroudak /srv/maroudak/scripts/deploy.sh
+   ```
+4. **حافظ على الروابط القديمة** (اختياري، موصى به إن فُهرس الموقع): أبقِ
+   `maroody.duckdns.org` يشير إلى الجهاز، وأضف كتلة `server` تحوّله بـ308
+   إلى `https://maroody.com$request_uri` — وإلا ضاعت روابط محركات البحث.
+5. **Search Console:** أضف الخاصية الجديدة، واستخدم «Change of address».
 
 ## 10. النسخ الاحتياطي
 
@@ -310,7 +337,7 @@ sudo systemctl start maroudak
 ## Google
 
 **Search Console:** search.google.com/search-console ← Add property ← **URL prefix**
-`https://maroody.com` ← طريقة **HTML tag** ← انسخ قيمة `content` فقط إلى
+`https://نطاقك` ← طريقة **HTML tag** ← انسخ قيمة `content` فقط إلى
 `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` ← `deploy.sh` ← Verify. ثم Sitemaps ←
 `sitemap.xml`.
 
@@ -327,7 +354,7 @@ events** — وإلا قاس GA صفحات الحساب والمعاريض مت�
 sudo -u maroudak /srv/maroudak/scripts/deploy.sh          # نشر
 sudo -u maroudak /srv/maroudak/scripts/rollback.sh        # رجوع
 sudo journalctl -u maroudak -f                            # السجلات
-curl -s https://maroody.com/api/health | jq                 # الصحة
+curl -s https://maroody.duckdns.org/api/health | jq         # الصحة (ضع نطاقك)
 sudo systemctl status maroudak postgresql nginx
 ```
 
