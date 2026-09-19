@@ -64,7 +64,7 @@ export function MarketingHeader() {
               <Link href="/login">تسجيل الدخول</Link>
             </Button>
             <Button size="sm" asChild>
-              <Link href="/register">ابدأ مجاناً</Link>
+              <Link href="/register">أنشئ حسابك</Link>
             </Button>
           </div>
 
@@ -100,7 +100,7 @@ export function MarketingHeader() {
                   <Link href="/login">تسجيل الدخول</Link>
                 </Button>
                 <Button block asChild>
-                  <Link href="/register">ابدأ مجاناً</Link>
+                  <Link href="/register">أنشئ حسابك</Link>
                 </Button>
               </div>
             </nav>

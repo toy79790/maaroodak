@@ -7,7 +7,7 @@ import { requireGuest } from '@/lib/auth/guards';
 
 export const metadata: Metadata = pageMetadata({
   title: 'إنشاء حساب',
-  description: 'أنشئ حساباً مجانياً وابدأ كتابة معروضك الأول في دقائق.',
+  description: 'أنشئ حسابك وابدأ كتابة معروضك في دقائق.',
   path: '/register',
 });
 

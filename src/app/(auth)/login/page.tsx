@@ -31,7 +31,7 @@ export default async function LoginPage({
         <>
           ليس لديك حساب؟{' '}
           <Link href="/register" className="font-medium text-primary hover:underline">
-            أنشئ حساباً مجانياً
+            أنشئ حساباً
           </Link>
         </>
       }

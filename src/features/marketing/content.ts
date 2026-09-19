@@ -13,6 +13,8 @@ import {
   FileDown,
   History,
 } from 'lucide-react';
+import { AI_TOOLS_PER_LETTER, PRICE_PER_LETTER_SAR } from '@/config/constants';
+import { toArabicDigits } from '@/lib/utils/arabic';
 
 /**
  * محتوى الصفحة التسويقية — مفصول عن العرض.
@@ -230,89 +232,28 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
       'اختر «جهة أخرى» واكتب اسم الجهة. سيتعامل النظام معها بالقالب الرسمي العام، وستحصل على خطاب صحيح الصياغة.',
   },
   {
+    question: 'كم تكلفة المعروض؟',
+    answer:
+      `${toArabicDigits(PRICE_PER_LETTER_SAR)} ريالاً للمعروض الواحد شاملة ضريبة القيمة المضافة، بلا اشتراك شهري. يشمل المقابلة وصياغة المعروض وفحص جودته وحتى ${toArabicDigits(AI_TOOLS_PER_LETTER)} تحسينات بالذكاء الاصطناعي، والتعديل اليدوي والتحميل بلا حدود. ولا يُخصم شيء إن تعذّر إنشاء المعروض من جانبنا.`,
+  },
+  {
     question: 'هل يمكنني استخدامها من الجوال؟',
     answer:
       'نعم. المنصة مصممة للجوال أولاً — شاشة إنشاء المعروض تحديداً مُحسّنة للاستخدام بيد واحدة.',
   },
 ];
 
-export interface PricingPlan {
-  key: string;
-  name: string;
-  price: number;
-  period: string;
-  description: string;
-  letters: string;
-  features: readonly string[];
-  cta: string;
-  isPopular?: boolean;
-}
-
-export const PRICING_PLANS: readonly PricingPlan[] = [
-  {
-    key: 'free',
-    name: 'مجاني',
-    price: 0,
-    period: 'للأبد',
-    description: 'لتجربة المنصة وكتابة معروضك الأول.',
-    letters: '٣ معاريض شهرياً',
-    features: [
-      'كل الجهات وأنواع الطلبات',
-      'المقابلة الذكية كاملة',
-      'تحميل PDF و Word',
-      'حفظ المعاريض والمسودات',
-    ],
-    cta: 'ابدأ مجاناً',
-  },
-  {
-    key: 'basic',
-    name: 'أساسي',
-    price: 49,
-    period: 'شهرياً',
-    description: 'للاستخدام الشخصي المتكرر.',
-    letters: '٢٠ معروضاً شهرياً',
-    features: [
-      'كل مزايا الخطة المجانية',
-      'أدوات التحرير بالذكاء الاصطناعي',
-      'فحص الجودة التلقائي',
-      'سجل النسخ الكامل',
-      'المفضلة والبحث المتقدم',
-    ],
-    cta: 'اشترك الآن',
-  },
-  {
-    key: 'pro',
-    name: 'احترافي',
-    price: 149,
-    period: 'شهرياً',
-    description: 'للمكاتب والمعقّبين وأصحاب الاستخدام الكثيف.',
-    letters: '١٠٠ معروض شهرياً',
-    features: [
-      'كل مزايا الخطة الأساسية',
-      'أولوية في المعالجة',
-      'أسئلة متابعة ذكية غير محدودة',
-      'قوالب مخصّصة',
-      'دعم فني مباشر',
-    ],
-    cta: 'اشترك الآن',
-    isPopular: true,
-  },
-  {
-    key: 'business',
-    name: 'أعمال',
-    price: 499,
-    period: 'شهرياً',
-    description: 'للمنشآت والفرق التي تكتب خطابات بشكل يومي.',
-    letters: '١٠٠٠ معروض شهرياً',
-    features: [
-      'كل مزايا الخطة الاحترافية',
-      'حسابات متعددة للفريق',
-      'جهات وقوالب خاصة بمنشأتك',
-      'تقارير استخدام',
-      'مدير حساب مخصّص',
-    ],
-    cta: 'تواصل معنا',
-  },
+/**
+ * التسعير: سعر واحد لكل معروض، بلا اشتراك — docs/DECISIONS.md #D-042.
+ * الأرقام من config/constants حتى لا يختلف ما يُعرض هنا عمّا في بقية المنصة.
+ */
+export const LETTER_PRICE_FEATURES: readonly string[] = [
+  'كل الجهات وأنواع الطلبات',
+  'المقابلة الذكية وصياغة المعروض كاملاً',
+  'فحص الجودة التلقائي وضوابط منع الاختلاق',
+  `حتى ${toArabicDigits(AI_TOOLS_PER_LETTER)} تحسينات بالذكاء الاصطناعي على المعروض نفسه`,
+  'تعديل يدوي بلا حدود مع سجل النسخ',
+  'تحميل Word وطباعة PDF',
 ];
 
 export const TRUST_POINTS: readonly { label: string; icon: LucideIcon }[] = [

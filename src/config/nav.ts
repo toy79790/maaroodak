@@ -56,7 +56,7 @@ export const USER_NAV: readonly NavGroup[] = [
   {
     label: 'الحساب',
     items: [
-      { href: '/credits', label: 'الرصيد والخطة', icon: 'credits' },
+      { href: '/credits', label: 'الرصيد', icon: 'credits' },
       { href: '/settings', label: 'الإعدادات', icon: 'settings', matchNested: true },
     ],
   },

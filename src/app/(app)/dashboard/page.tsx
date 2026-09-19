@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { EmptyState, PageHeader } from '@/components/shared/states';
 import { LETTER_STATUS_LABEL, LETTER_STATUS_TONE } from '@/features/letters/labels';
 import { formatArabicDate } from '@/lib/utils/arabic';
+import { PRICE_PER_LETTER_SAR } from '@/config/constants';
 import {
   getDashboardStats,
   getRecentLetters,
@@ -115,7 +116,7 @@ export default async function DashboardPage() {
           label="الرصيد المتبقي"
           value={stats.creditBalance}
           icon={Coins}
-          hint="معروض واحد = رصيد واحد"
+          hint={`رصيد واحد = معروض واحد (${PRICE_PER_LETTER_SAR} ريالاً)`}
         />
       </div>
 

@@ -11,10 +11,8 @@ import {
 } from '@/lib/auth/password';
 import { createSession, revokeAllSessions } from '@/lib/auth/session';
 import { AppError, errors, fail, ok, type Result } from '@/lib/api/errors';
-import {
-  PASSWORD_RESET_TTL_MINUTES,
-  SIGNUP_BONUS_CREDITS,
-} from '@/config/constants';
+import { PASSWORD_RESET_TTL_MINUTES } from '@/config/constants';
+import { getSettings } from '@/lib/db/repositories/settings-repository';
 import { absoluteUrl, isDevelopment } from '@/config/env';
 import { passwordResetMessage, sendMail } from '@/lib/mail/mailer';
 import type {
@@ -54,6 +52,8 @@ export async function register(
   }
 
   const passwordHash = await hashPassword(input.password);
+  // من الإعدادات: الافتراضي صفر (#D-042)، والمسؤول يستطيع منح رصيد ترحيبي.
+  const { signupBonusCredits } = await getSettings();
 
   try {
     // الخصم والمنح والحساب في معاملة واحدة: مستخدم بلا رصيد ابتدائي
@@ -65,19 +65,22 @@ export async function register(
           email: input.email,
           passwordHash,
           phone: input.phone || null,
-          creditBalance: SIGNUP_BONUS_CREDITS,
+          creditBalance: signupBonusCredits,
         },
         select: { id: true, email: true, name: true },
       });
 
-      await tx.creditTransaction.create({
-        data: {
-          userId: created.id,
-          amount: SIGNUP_BONUS_CREDITS,
-          balanceAfter: SIGNUP_BONUS_CREDITS,
-          reason: 'SIGNUP_BONUS',
-        },
-      });
+      // حركة بمبلغ صفر ضجيج في الدفتر — تُسجَّل المنحة فقط حين توجد.
+      if (signupBonusCredits > 0) {
+        await tx.creditTransaction.create({
+          data: {
+            userId: created.id,
+            amount: signupBonusCredits,
+            balanceAfter: signupBonusCredits,
+            reason: 'SIGNUP_BONUS',
+          },
+        });
+      }
 
       return created;
     });

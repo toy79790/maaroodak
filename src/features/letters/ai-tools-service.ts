@@ -11,7 +11,7 @@ import { LLMError } from '@/services/ai/ports';
 import { computeState } from '@/services/questions/engine';
 import { extractNumbers } from '@/lib/utils/arabic';
 import { htmlToText, textToHtml } from '@/features/letters/html';
-import { assertCanSpend, spend } from '@/services/credits/credit-service';
+import { assertCanSpend, countToolUses, spend } from '@/services/credits/credit-service';
 import { recordFailure, recordUsage } from '@/services/ai/usage-tracker';
 import { recordEvent } from '@/services/analytics/analytics-service';
 import { updateLetter } from '@/features/letters/service';
@@ -27,7 +27,8 @@ import {
  * أدوات التحرير العشر — docs/AI_SYSTEM.md §10
  *
  * تُطبَّق على التحديد إن وُجد، وإلا على النص كاملاً.
- * كل استدعاء = نسخة جديدة + 1 Credit + سجل استخدام.
+ * كل استدعاء = نسخة جديدة + حركة في الدفتر + سجل استخدام. مشمولة مع المعروض
+ * بحد لكل معروض، وتكلفتها بالرصيد من الإعدادات (صفر افتراضياً) — #D-042.
  */
 
 
@@ -78,6 +79,8 @@ export interface RunToolResult {
   /** تحذيرات ضوابط ظهرت بعد التنفيذ. */
   warnings: string[];
   creditBalance: number;
+  /** ما تبقّى من أدوات الذكاء الاصطناعي المشمولة لهذا المعروض — #D-042 */
+  toolsRemaining: number;
 }
 
 export async function runAiTool(
@@ -110,10 +113,22 @@ export async function runAiTool(
   const canSpend = await assertCanSpend(userId, 'AI_TOOL');
   if (!canSpend.ok) return fail(canSpend.error);
 
-  const [settings, prompt] = await Promise.all([
+  const [settings, prompt, toolsUsed] = await Promise.all([
     getSettings(),
     resolvePrompt(scope, TOOL_PROMPT_TYPE[input.tool]),
+    countToolUses(userId, letterId),
   ]);
+
+  // الحد قبل نداء النموذج لا بعده: التكلفة تقع عند النداء نفسه (#D-042).
+  if (toolsUsed >= settings.aiToolsPerLetter) {
+    return fail(
+      new AppError('QUOTA_EXCEEDED', {
+        message: `استخدمت التحسينات المشمولة لهذا المعروض (${settings.aiToolsPerLetter}). يمكنك مواصلة التعديل يدوياً في المحرر بلا حدود.`,
+      }),
+    );
+  }
+  // هذا الاستخدام نفسه يُحتسب فور نجاحه.
+  const toolsRemaining = Math.max(settings.aiToolsPerLetter - toolsUsed - 1, 0);
 
   if (!prompt) {
     return fail(errors.internal(new Error(`لا يوجد موجّه للأداة ${input.tool}.`)));
@@ -259,6 +274,7 @@ export async function runAiTool(
       suggestions,
       warnings,
       creditBalance: spent.data.balanceAfter,
+      toolsRemaining,
     });
   }
 
@@ -312,6 +328,7 @@ export async function runAiTool(
     contentHtml: updated.data.contentHtml,
     warnings,
     creditBalance: spent.data.balanceAfter,
+    toolsRemaining,
   });
 }
 

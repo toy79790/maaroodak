@@ -69,6 +69,17 @@ function isDisallowedControl(code: number): boolean {
 // التحويلات
 // ---------------------------------------------------------------------------
 
+/**
+ * 0123456789 → الأرقام العربية الهندية، للنصوص التسويقية («١٠ تحسينات»).
+ * بنقطة الترميز رقمياً (U+0660 + الرقم) لا بمحارف حرفية في الشيفرة — انظر
+ * CLAUDE.md «قيود بيئة التطوير» #2.
+ */
+export function toArabicDigits(input: string | number): string {
+  return String(input).replace(/[0-9]/g, (digit) =>
+    String.fromCodePoint(0x0660 + Number(digit)),
+  );
+}
+
 /** ٠١٢٣٤٥٦٧٨٩ / ۰۱۲۳۴۵۶۷۸۹ → 0123456789 */
 export function toLatinDigits(input: string): string {
   let out = '';

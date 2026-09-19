@@ -11,14 +11,28 @@ export const SESSION_SLIDING_RENEWAL_HOURS = 24;
 export const PASSWORD_RESET_TTL_MINUTES = 30;
 export const BCRYPT_COST = 12;
 
-// --- الرصيد -----------------------------------------------------------------
-export const SIGNUP_BONUS_CREDITS = 3;
+// --- التسعير والرصيد — docs/DECISIONS.md #D-042 ----------------------------
+/**
+ * سعر المعروض الواحد بالريال، **شامل ضريبة القيمة المضافة**. رصيد واحد =
+ * معروض واحد. للعرض في الواجهة فقط: الصفحات التسويقية تُبنى ثابتة وقت البناء،
+ * فتغيير السعر يتطلب نشراً — عمداً، كي لا يختلف السعر المعروض عمّا يُحصَّل.
+ */
+export const PRICE_PER_LETTER_SAR = 30;
 
-/** تكلفة كل عملية بالـ Credits — قابلة للتعديل من SystemSetting. */
+/** لا معاريض مجانية عند التسجيل. قابل للتعديل من الإعدادات (credits.signupBonus). */
+export const SIGNUP_BONUS_CREDITS = 0;
+
+/**
+ * أدوات الذكاء الاصطناعي على معروض مدفوع مشمولة بلا رصيد، حتى هذا العدد لكل
+ * معروض — يحمي تكلفة النموذج من الاستخدام المفرط. قابل للتعديل من الإعدادات.
+ */
+export const AI_TOOLS_PER_LETTER = 10;
+
+/** تكلفة كل عملية بالرصيد — الافتراضي؛ القيمة الفعلية من SystemSetting. */
 export const CREDIT_COSTS = {
   GENERATE_LETTER: 1,
   REGENERATE: 1,
-  AI_TOOL: 1,
+  AI_TOOL: 0,
   FOLLOW_UP: 1,
   QUALITY_CHECK: 1,
 } as const;

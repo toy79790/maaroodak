@@ -11,6 +11,7 @@ import {
 } from '@/features/marketing/components/sections';
 import { JsonLd } from '@/components/shared/json-ld';
 import { site } from '@/config/site';
+import { PRICE_PER_LETTER_SAR } from '@/config/constants';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
@@ -40,8 +41,9 @@ const STRUCTURED_DATA = [
     description: site.description,
     offers: {
       '@type': 'Offer',
-      price: '0',
+      price: String(PRICE_PER_LETTER_SAR),
       priceCurrency: 'SAR',
+      description: 'للمعروض الواحد، شامل ضريبة القيمة المضافة',
     },
   },
 ];

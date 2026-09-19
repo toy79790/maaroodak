@@ -11,6 +11,7 @@ import { QuestionInput } from '@/features/interview/components/question-input';
 import { api, ApiError } from '@/lib/api/client';
 import { cn } from '@/lib/utils/cn';
 import type { AnswerMap, AnswerValue, EngineState } from '@/types/questions';
+import { PRICE_PER_LETTER_SAR } from '@/config/constants';
 
 /**
  * معالج المقابلة — الشاشة الأهم في المنتج.
@@ -218,7 +219,7 @@ function ReviewStep({
       </div>
 
       <p className="mt-4 text-center text-xs text-subtle-foreground">
-        سيُخصم رصيد واحد عند إنشاء المعروض.
+        يُخصم رصيد معروض واحد ({PRICE_PER_LETTER_SAR} ريالاً) عند الإنشاء، ولا يُخصم شيء إن لم يكتمل.
       </p>
     </div>
   );
@@ -325,7 +326,7 @@ export function InterviewWizard({ initial }: { initial: InterviewData }) {
       if (error instanceof ApiError) {
         if (error.code === 'INSUFFICIENT_CREDITS') {
           toast.error(error.message, {
-            action: { label: 'الخطط', onClick: () => router.push('/credits') },
+            action: { label: 'شراء رصيد', onClick: () => router.push('/credits') },
           });
           return;
         }

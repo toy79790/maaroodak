@@ -56,14 +56,27 @@ const FIELDS: Record<string, FieldSpec> = {
 
   'credits.signupBonus': {
     label: 'رصيد الترحيب',
-    hint: 'يُمنح عند إنشاء الحساب.',
+    hint: 'معاريض مجانية تُمنح عند إنشاء الحساب. الافتراضي صفر.',
     kind: 'number',
     min: 0,
     max: 1000,
   },
   'credits.costs.generate': { label: 'تكلفة إنشاء معروض', kind: 'number', min: 0, max: 100 },
   'credits.costs.regenerate': { label: 'تكلفة إعادة التوليد', kind: 'number', min: 0, max: 100 },
-  'credits.costs.aiTool': { label: 'تكلفة أداة تحرير', kind: 'number', min: 0, max: 100 },
+  'credits.costs.aiTool': {
+    label: 'تكلفة أداة تحرير',
+    hint: 'صفر = مشمولة مع المعروض ضمن الحد أدناه.',
+    kind: 'number',
+    min: 0,
+    max: 100,
+  },
+  'credits.aiToolsPerLetter': {
+    label: 'حد أدوات الذكاء الاصطناعي لكل معروض',
+    hint: 'صفحة الأسعار تعرض الرقم الافتراضي (10) — غيّره هنا يغيّر التطبيق لا النص التسويقي.',
+    kind: 'number',
+    min: 0,
+    max: 100,
+  },
   'credits.costs.followUp': { label: 'تكلفة أسئلة المتابعة', kind: 'number', min: 0, max: 100 },
   'credits.costs.qualityCheck': { label: 'تكلفة فحص الجودة', kind: 'number', min: 0, max: 100 },
 

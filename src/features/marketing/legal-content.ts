@@ -1,5 +1,6 @@
 import { site } from '@/config/site';
 import { publicEnv } from '@/config/public-env';
+import { AI_TOOLS_PER_LETTER, PRICE_PER_LETTER_SAR } from '@/config/constants';
 
 /**
  * النصوص القانونية — docs/PROJECT_PLAN.md (متطلب §34)
@@ -8,7 +9,7 @@ import { publicEnv } from '@/config/public-env';
  * قبل الإطلاق التجاري يجب مراجعتها من مختص وتحديث `lastUpdated`.
  */
 
-export const LEGAL_LAST_UPDATED = '25 أغسطس 2026';
+export const LEGAL_LAST_UPDATED = '19 سبتمبر 2026';
 
 export interface LegalSection {
   heading: string;
@@ -112,9 +113,11 @@ export const TERMS_SECTIONS: readonly LegalSection[] = [
     ],
   },
   {
-    heading: 'الرصيد والاشتراكات',
+    heading: 'الرصيد والأسعار',
     paragraphs: [
-      'كل عملية إنشاء أو أداة ذكاء اصطناعي تستهلك رصيداً. الرصيد لا يُسترد نقداً.',
+      `سعر المعروض الواحد ${PRICE_PER_LETTER_SAR} ريالاً شاملة ضريبة القيمة المضافة، وإنشاء كل معروض يستهلك رصيد معروض واحد. لا اشتراكات شهرية.`,
+      `يشمل كل معروض حتى ${AI_TOOLS_PER_LETTER} استخدامات لأدوات التحسين بالذكاء الاصطناعي، والتعديل اليدوي بلا حدود.`,
+      'الرصيد لا يُسترد نقداً.',
       'لا يُخصم رصيد عند فشل العملية من جانبنا.',
     ],
   },

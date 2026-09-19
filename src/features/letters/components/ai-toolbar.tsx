@@ -61,12 +61,16 @@ export function AiToolbar({
   selectionText,
   disabled,
   disabledReason,
+  toolsLimit,
+  toolsRemaining,
 }: {
   onRun: (tool: AiTool) => void;
   running: AiTool | null;
   selectionText: string;
   disabled?: boolean;
   disabledReason?: string;
+  toolsLimit: number;
+  toolsRemaining: number;
 }) {
   const hasSelection = selectionText.trim().length > 0;
 
@@ -78,8 +82,11 @@ export function AiToolbar({
       <div className="mb-3 flex items-center gap-2">
         <Sparkles className="size-4.5 text-primary" aria-hidden />
         <h2 className="text-sm font-semibold">أدوات الذكاء الاصطناعي</h2>
-        <span className="ms-auto text-xs text-muted-foreground">
-          رصيد واحد لكل استخدام
+        <span
+          className="tabular ms-auto text-xs text-muted-foreground"
+          title={`مشمولة مع المعروض: حتى ${toolsLimit} تحسينات`}
+        >
+          مشمولة · متبقٍ {toolsRemaining} من {toolsLimit}
         </span>
       </div>
 

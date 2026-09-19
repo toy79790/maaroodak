@@ -1,22 +1,24 @@
 import type { Metadata } from 'next';
-import { Coins, Check, TrendingDown, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+import { Coins, Check, Mail, TrendingDown, TrendingUp } from 'lucide-react';
 import { requireUser } from '@/lib/auth/guards';
 import { getSummary, listTransactions } from '@/services/credits/credit-service';
-import { prisma } from '@/lib/db/prisma';
+import { PRICE_PER_LETTER_SAR } from '@/config/constants';
+import { site } from '@/config/site';
+import { LETTER_PRICE_FEATURES } from '@/features/marketing/content';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/shared/states';
 import { formatArabicDate } from '@/lib/utils/arabic';
 import { cn } from '@/lib/utils/cn';
 
-export const metadata: Metadata = { title: 'الرصيد والخطة' };
+export const metadata: Metadata = { title: 'الرصيد' };
 
 const REASON_LABELS: Record<string, string> = {
   SIGNUP_BONUS: 'رصيد ترحيبي',
   PLAN_GRANT: 'منحة خطة',
-  ADMIN_ADJUST: 'تعديل إداري',
+  ADMIN_ADJUST: 'شراء رصيد / تعديل إداري',
+  AI_TOOL: 'تحسين بالذكاء الاصطناعي (مشمول)',
   GENERATE_LETTER: 'إنشاء معروض',
-  AI_TOOL: 'أداة ذكاء اصطناعي',
   REGENERATE: 'إعادة توليد',
   QUALITY_CHECK: 'فحص جودة',
   FOLLOW_UP: 'أسئلة متابعة',
@@ -27,30 +29,16 @@ const REASON_LABELS: Record<string, string> = {
 export default async function CreditsPage() {
   const { user } = await requireUser();
 
-  const [summary, transactions, plans] = await Promise.all([
+  const [summary, transactions] = await Promise.all([
     getSummary(user.id),
     listTransactions(user.id, 30),
-    prisma.plan.findMany({
-      where: { isActive: true },
-      orderBy: { order: 'asc' },
-      select: {
-        id: true,
-        key: true,
-        name: true,
-        description: true,
-        priceMonthly: true,
-        lettersPerMonth: true,
-        features: true,
-        isPopular: true,
-      },
-    }),
   ]);
 
   return (
     <>
       <PageHeader
-        title="الرصيد والخطة"
-        description="كل معروض أو أداة ذكاء اصطناعي تستهلك رصيداً واحداً."
+        title="الرصيد"
+        description={`رصيد واحد = معروض واحد بـ${PRICE_PER_LETTER_SAR} ريالاً شاملة الضريبة. أدوات التحسين مشمولة.`}
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -71,44 +59,50 @@ export default async function CreditsPage() {
         ))}
       </div>
 
-      {/* --- الخطط --- */}
-      <h2 className="mb-4 mt-8 font-semibold">الخطط المتاحة</h2>
+      {/* --- شراء رصيد — #D-042 --- */}
+      <h2 className="mb-4 mt-8 font-semibold">شراء رصيد</h2>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {plans.map((plan) => (
-          <Card
-            key={plan.id}
-            className={cn('p-5', plan.isPopular && 'border-primary ring-1 ring-primary')}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">{plan.name}</h3>
-              {plan.isPopular ? <Badge tone="brand">الأكثر اختياراً</Badge> : null}
-            </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="p-6">
+          <h3 className="font-semibold">المعروض الواحد</h3>
+          <p className="mt-3 flex items-baseline gap-1.5">
+            <span className="tabular text-3xl font-bold">{PRICE_PER_LETTER_SAR}</span>
+            <span className="text-sm text-muted-foreground">ريال · شامل الضريبة</span>
+          </p>
+          <ul className="mt-5 space-y-2">
+            {LETTER_PRICE_FEATURES.map((feature) => (
+              <li key={feature} className="flex gap-2 text-sm">
+                <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                <span className="text-muted-foreground">{feature}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
 
-            <p className="mt-2 flex items-baseline gap-1.5">
-              <span className="tabular text-2xl font-bold">{plan.priceMonthly}</span>
-              <span className="text-xs text-muted-foreground">ريال / شهرياً</span>
-            </p>
-
-            <p className="mt-3 rounded-lg bg-surface-muted px-3 py-2 text-center text-sm">
-              {plan.lettersPerMonth} معروض شهرياً
-            </p>
-
-            <ul className="mt-4 space-y-2">
-              {(Array.isArray(plan.features) ? plan.features : []).map((feature) => (
-                <li key={String(feature)} className="flex gap-2 text-xs">
-                  <Check className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
-                  <span className="text-muted-foreground">{String(feature)}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        ))}
+        {/* الدفع الإلكتروني لم يُربط بعد: الشراء بالتواصل، والمسؤول يضيف الرصيد من لوحة المستخدمين. */}
+        <Card className="flex flex-col p-6">
+          <h3 className="font-semibold">كيف أشتري رصيداً؟</h3>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            الدفع الإلكتروني قيد التجهيز. حالياً راسلنا بعدد المعاريض التي تحتاجها،
+            وسنرسل لك طريقة الدفع ونضيف الرصيد إلى حسابك.
+          </p>
+          <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row">
+            <a
+              href={`mailto:${site.supportEmail}?subject=${encodeURIComponent('شراء رصيد معاريض')}`}
+              className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-field)] bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary-hover"
+            >
+              <Mail className="size-4" aria-hidden />
+              راسلنا لشراء رصيد
+            </a>
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center rounded-[var(--radius-field)] border border-border px-4 py-2.5 text-sm hover:bg-surface-muted"
+            >
+              طرق التواصل
+            </Link>
+          </div>
+        </Card>
       </div>
-
-      <p className="mt-4 rounded-[var(--radius-field)] border border-info/30 bg-info-subtle px-4 py-3 text-sm text-info">
-        الاشتراكات المدفوعة قيد التجهيز. حسابك يعمل بالكامل على الخطة المجانية.
-      </p>
 
       {/* --- الحركات --- */}
       <h2 className="mb-4 mt-8 font-semibold">سجل الحركات</h2>

@@ -3,7 +3,8 @@ import 'server-only';
 import type { CreditReason, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { AppError, errors, fail, ok, type Result } from '@/lib/api/errors';
-import { CREDIT_COSTS } from '@/config/constants';
+import type { CREDIT_COSTS } from '@/config/constants';
+import { getSettings } from '@/lib/db/repositories/settings-repository';
 
 /**
  * الرصيد — docs/DATABASE.md §3 · docs/AI_SYSTEM.md §5
@@ -17,8 +18,13 @@ import { CREDIT_COSTS } from '@/config/constants';
 
 export type CreditOperation = keyof typeof CREDIT_COSTS;
 
-export function costOf(operation: CreditOperation): number {
-  return CREDIT_COSTS[operation];
+/**
+ * التكلفة من الإعدادات لا من الثوابت: قيم لوحة الإدارة كانت تُعرض وتُحفظ
+ * ولا يقرؤها أحد — تعديلها بلا أثر (#D-042). الثوابت صارت الافتراضي فقط.
+ */
+export async function costOf(operation: CreditOperation): Promise<number> {
+  const settings = await getSettings();
+  return settings.creditCosts[operation];
 }
 
 /** فحص الكفاية قبل استدعاء الذكاء الاصطناعي — لا خصم هنا. */
@@ -26,7 +32,7 @@ export async function assertCanSpend(
   userId: string,
   operation: CreditOperation,
 ): Promise<Result<{ balance: number; cost: number }>> {
-  const cost = costOf(operation);
+  const cost = await costOf(operation);
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -40,7 +46,7 @@ export async function assertCanSpend(
       new AppError('INSUFFICIENT_CREDITS', {
         message:
           user.creditBalance === 0
-            ? 'انتهى رصيدك. جدّد خطتك للمتابعة.'
+            ? 'لا يوجد لديك رصيد. اشترِ رصيد معروض من صفحة الرصيد للمتابعة.'
             : `رصيدك (${user.creditBalance}) لا يكفي لهذه العملية (تحتاج ${cost}).`,
       }),
     );
@@ -67,7 +73,7 @@ export async function spend(
   input: SpendInput,
   tx: Prisma.TransactionClient = prisma,
 ): Promise<Result<{ balanceAfter: number }>> {
-  const cost = costOf(input.operation);
+  const cost = await costOf(input.operation);
 
   const updated = await tx.user.updateMany({
     where: { id: input.userId, creditBalance: { gte: cost } },
@@ -134,6 +140,17 @@ export async function grant(
   });
 
   return ok({ balanceAfter: user.creditBalance });
+}
+
+/**
+ * عدد مرات استخدام أدوات الذكاء الاصطناعي على معروض — من الدفتر نفسه:
+ * كل استخدام ناجح يُسجَّل حركةً (بمبلغ صفر حين تكون الأداة مشمولة)، فالعدّ
+ * لا يحتاج جدولاً ولا عموداً جديداً.
+ */
+export async function countToolUses(userId: string, letterId: string): Promise<number> {
+  return prisma.creditTransaction.count({
+    where: { userId, reason: 'AI_TOOL', referenceId: letterId },
+  });
 }
 
 export interface CreditSummary {

@@ -89,6 +89,9 @@ interface LetterWorkspaceProps {
   guardrails?: GuardrailWarning[];
   placeholders?: string[];
   creditBalance: number;
+  /** أدوات الذكاء الاصطناعي المشمولة لهذا المعروض — #D-042 */
+  toolsLimit: number;
+  toolsRemaining: number;
   aiEnabled: boolean;
 }
 
@@ -99,6 +102,8 @@ export function LetterWorkspace({
   guardrails = [],
   placeholders = [],
   creditBalance: initialCredits,
+  toolsLimit,
+  toolsRemaining: initialToolsRemaining,
   aiEnabled,
 }: LetterWorkspaceProps) {
   const router = useRouter();
@@ -108,6 +113,7 @@ export function LetterWorkspace({
   const [letter, setLetter] = React.useState(initial);
   const [draftHtml, setDraftHtml] = React.useState(initial.contentHtml);
   const [title, setTitle] = React.useState(initial.title);
+  const [toolsRemaining, setToolsRemaining] = React.useState(initialToolsRemaining);
   const [selection, setSelection] = React.useState('');
   const [credits, setCredits] = React.useState(initialCredits);
 
@@ -166,12 +172,14 @@ export function LetterWorkspace({
         suggestions?: string[];
         warnings: string[];
         creditBalance: number;
+        toolsRemaining: number;
       }>(`/api/letters/${letter.id}/ai-tool`, {
         tool,
         selection: selection.trim() || null,
       });
 
       setCredits(response.data.creditBalance);
+      setToolsRemaining(response.data.toolsRemaining);
 
       if (response.data.suggestions) {
         toast.custom(
@@ -218,8 +226,11 @@ export function LetterWorkspace({
       if (error instanceof ApiError) {
         if (error.code === 'INSUFFICIENT_CREDITS') {
           toast.error(error.message, {
-            action: { label: 'الخطط', onClick: () => router.push('/credits') },
+            action: { label: 'شراء رصيد', onClick: () => router.push('/credits') },
           });
+        } else if (error.code === 'QUOTA_EXCEEDED') {
+          setToolsRemaining(0);
+          toast.error(error.message);
         } else {
           toast.error(error.message);
         }
@@ -409,16 +420,18 @@ export function LetterWorkspace({
               onRun={(tool) => void runTool(tool)}
               running={runningTool}
               selectionText={selection}
-              disabled={!aiEnabled || credits <= 0}
+              toolsLimit={toolsLimit}
+              toolsRemaining={toolsRemaining}
+              disabled={!aiEnabled || toolsRemaining <= 0}
               disabledReason={
                 !aiEnabled
                   ? 'خدمة الذكاء الاصطناعي غير مُهيّأة على الخادم.'
-                  : 'رصيدك لا يكفي. جدّد خطتك لاستخدام الأدوات.'
+                  : 'استخدمت التحسينات المشمولة لهذا المعروض. واصل التعديل يدوياً في المحرر بلا حدود.'
               }
             />
 
             <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4">
-              <p className="text-xs text-muted-foreground">الرصيد المتبقي</p>
+              <p className="text-xs text-muted-foreground">رصيد المعاريض المتبقي</p>
               <p className="tabular mt-1 text-2xl font-bold">{credits}</p>
             </div>
           </div>

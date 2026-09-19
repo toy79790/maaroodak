@@ -80,7 +80,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 docs/     PROJECT_PLAN · ARCHITECTURE · DATABASE · API · AI_SYSTEM · SECURITY
           TESTING · DECISIONS · DEPLOYMENT · ENVIRONMENT · PRODUCTION_CHECKLIST
-prisma/   المخطط + البذور (28 جهة · 21 نوع طلب · 98 سؤال · 15 قاعدة شرطية · 43 موجّهاً)
+prisma/   المخطط + البذور (28 جهة · 5 فئات · 21 نوع طلب · 98 سؤال · 15 قاعدة شرطية · 43 موجّهاً)
 src/
   app/          الصفحات ومسارات الـ API
   components/   مكوّنات العرض
@@ -121,11 +121,13 @@ tests/    unit · integration (على PostgreSQL حقيقية) · e2e (Playwrigh
 
 ## الحالة
 
-الاختبارات: **124** وحدة وتكامل (على PostgreSQL حقيقية) + **28** اختبار متصفح (سطح المكتب والجوال).
+الاختبارات: **128** وحدة وتكامل (على PostgreSQL حقيقية) + **28** اختبار متصفح (سطح المكتب والجوال).
 حالة المراحل الـ13 وما تبقّى: [docs/PROJECT_PLAN.md §4](docs/PROJECT_PLAN.md).
 
 **قبل الإطلاق التجاري** راجع
 [PRODUCTION_CHECKLIST.md §17](docs/PRODUCTION_CHECKLIST.md) — فيه ما لم
-يُنفَّذ عمداً في v1 (بوابة الدفع · فرض الحصة الشهرية · تحديد المعدّل عبر Redis).
+يُنفَّذ عمداً في v1 (بوابة الدفع · تحديد المعدّل عبر Redis).
+
+**التسعير:** ٣٠ ريالاً للمعروض الواحد شاملة الضريبة، بلا اشتراكات ([#D-042](docs/DECISIONS.md)).
 
 **إخلاء مسؤولية:** المنصة تساعد في صياغة الخطابات ولا تقدّم استشارة قانونية.

@@ -91,9 +91,11 @@ export const SYSTEM_SETTINGS: ReadonlyArray<{
     value: process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() ?? '',
     category: 'general',
   },
-  { key: 'credits.signupBonus', value: 3, category: 'credits' },
+  // التسعير لكل معروض (#D-042): لا رصيد ترحيبي، والأدوات مشمولة بحد.
+  { key: 'credits.signupBonus', value: 0, category: 'credits' },
+  { key: 'credits.aiToolsPerLetter', value: 10, category: 'credits' },
   { key: 'credits.costs.generate', value: 1, category: 'credits' },
-  { key: 'credits.costs.aiTool', value: 1, category: 'credits' },
+  { key: 'credits.costs.aiTool', value: 0, category: 'credits' },
   { key: 'credits.costs.regenerate', value: 1, category: 'credits' },
   { key: 'credits.costs.followUp', value: 1, category: 'credits' },
   { key: 'credits.costs.qualityCheck', value: 1, category: 'credits' },

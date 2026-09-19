@@ -1,7 +1,12 @@
 import 'server-only';
 
 import { prisma } from '@/lib/db/prisma';
-import { AI_DEFAULTS, CREDIT_COSTS, SIGNUP_BONUS_CREDITS } from '@/config/constants';
+import {
+  AI_DEFAULTS,
+  AI_TOOLS_PER_LETTER,
+  CREDIT_COSTS,
+  SIGNUP_BONUS_CREDITS,
+} from '@/config/constants';
 import { site } from '@/config/site';
 import type { EffortLevel } from '@/services/ai/ports';
 
@@ -21,6 +26,8 @@ export interface AppSettings {
 
   signupBonusCredits: number;
   creditCosts: Record<keyof typeof CREDIT_COSTS, number>;
+  /** حد أدوات الذكاء الاصطناعي لكل معروض — #D-042 */
+  aiToolsPerLetter: number;
 
   aiModelGenerate: string;
   aiModelTools: string;
@@ -82,6 +89,7 @@ export async function getSettings(): Promise<AppSettings> {
       map.get('credits.signupBonus'),
       SIGNUP_BONUS_CREDITS,
     ),
+    aiToolsPerLetter: asNumber(map.get('credits.aiToolsPerLetter'), AI_TOOLS_PER_LETTER),
     creditCosts: {
       GENERATE_LETTER: asNumber(
         map.get('credits.costs.generate'),

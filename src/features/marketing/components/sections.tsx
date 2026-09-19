@@ -15,12 +15,12 @@ import {
   DEPARTMENT_GROUPS,
   FAQ_ITEMS,
   FEATURES,
-  PRICING_PLANS,
+  LETTER_PRICE_FEATURES,
   REQUEST_TYPE_CHIPS,
   STEPS,
 } from '@/features/marketing/content';
 import { AI_DISCLAIMER_SHORT } from '@/config/site';
-import { cn } from '@/lib/utils/cn';
+import { PRICE_PER_LETTER_SAR } from '@/config/constants';
 
 /* -------------------------------------------------------------------------- */
 
@@ -211,70 +211,39 @@ export function Pricing() {
   return (
     <Section id="pricing" muted>
       <SectionHeading
-        title="ابدأ مجاناً، وارتقِ عند الحاجة"
-        description="كل الخطط تشمل الجهات وأنواع الطلبات كاملة. الفرق في عدد المعاريض والأدوات المتقدمة."
+        title="تدفع لكل معروض فقط"
+        description="بلا اشتراك شهري ولا التزام. سعر واحد يشمل كل ما يحتاجه المعروض حتى يصبح جاهزاً للتقديم."
       />
 
-      <div className="grid gap-5 lg:grid-cols-4">
-        {PRICING_PLANS.map((plan) => (
-          <Card
-            key={plan.key}
-            className={cn(
-              'relative flex flex-col p-6 surface-flat',
-              plan.isPopular && 'border-primary ring-1 ring-primary',
-            )}
-          >
-            {plan.isPopular ? (
-              <Badge
-                tone="brand"
-                className="absolute -top-3 start-1/2 -translate-x-1/2 bg-primary text-primary-foreground rtl:translate-x-1/2"
-              >
-                الأكثر اختياراً
-              </Badge>
-            ) : null}
+      <Card className="mx-auto flex max-w-md flex-col p-8 surface-flat border-primary ring-1 ring-primary">
+        <h3 className="font-semibold">المعروض الواحد</h3>
 
-            <h3 className="font-semibold">{plan.name}</h3>
-            <p className="mt-1 min-h-10 text-sm text-muted-foreground">
-              {plan.description}
-            </p>
+        <p className="mt-4 flex items-baseline gap-2">
+          <span className="text-4xl font-bold tabular">{PRICE_PER_LETTER_SAR}</span>
+          <span className="text-sm text-muted-foreground">ريال</span>
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">شامل ضريبة القيمة المضافة</p>
 
-            <p className="mt-4 flex items-baseline gap-1.5">
-              <span className="text-3xl font-bold tabular">{plan.price}</span>
-              <span className="text-sm text-muted-foreground">
-                ريال / {plan.period}
-              </span>
-            </p>
+        <ul className="mt-6 flex-1 space-y-2.5">
+          {LETTER_PRICE_FEATURES.map((feature) => (
+            <li key={feature} className="flex gap-2 text-sm">
+              <Check className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+              <span className="text-muted-foreground">{feature}</span>
+            </li>
+          ))}
+        </ul>
 
-            <p className="mt-3 rounded-lg bg-primary-subtle px-3 py-2 text-center text-sm font-medium text-primary">
-              {plan.letters}
-            </p>
-
-            <ul className="mt-5 flex-1 space-y-2.5">
-              {plan.features.map((feature) => (
-                <li key={feature} className="flex gap-2 text-sm">
-                  <Check
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    aria-hidden
-                  />
-                  <span className="text-muted-foreground">{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <Button
-              className="mt-6"
-              block
-              variant={plan.isPopular ? 'primary' : 'secondary'}
-              asChild
-            >
-              <Link href="/register">{plan.cta}</Link>
-            </Button>
-          </Card>
-        ))}
-      </div>
+        <Button className="mt-8" block asChild>
+          <Link href="/register">أنشئ حسابك</Link>
+        </Button>
+      </Card>
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        الاشتراكات المدفوعة قيد التجهيز. حسابك المجاني يعمل بالكامل من الآن.
+        الدفع الإلكتروني قيد التجهيز. لشراء رصيد الآن{' '}
+        <Link href="/contact" className="text-primary hover:underline">
+          تواصل معنا
+        </Link>
+        .
       </p>
     </Section>
   );
@@ -324,8 +293,8 @@ export function FinalCta() {
               معروضك الأول يبعد عنك دقائق
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-brand-100">
-              أجب عن عدة أسئلة، ودع الباقي علينا. ٣ معاريض مجاناً كل شهر، بلا
-              بطاقة ائتمانية.
+              أجب عن عدة أسئلة، ودع الباقي علينا. سعر واحد للمعروض، بلا اشتراك
+              ولا التزام شهري.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button size="lg" variant="secondary" asChild>

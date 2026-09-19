@@ -9,7 +9,7 @@ import { FormError, FormField } from '@/components/shared/form-field';
 import { PasswordInput } from '@/features/auth/components/password-input';
 import { api, ApiError } from '@/lib/api/client';
 import { registerSchema } from '@/features/auth/schema';
-import { SIGNUP_BONUS_CREDITS } from '@/config/constants';
+import { PRICE_PER_LETTER_SAR } from '@/config/constants';
 import { cn } from '@/lib/utils/cn';
 
 /** مؤشر قوة بسيط وصادق — لا يَعِد بأمان، بل يوجّه نحو كلمة أطول. */
@@ -156,7 +156,7 @@ export function RegisterForm({ redirectTo = '/dashboard' }: { redirectTo?: strin
       </Button>
 
       <p className="text-center text-xs text-muted-foreground">
-        تحصل على {SIGNUP_BONUS_CREDITS} معاريض مجاناً فور التسجيل.
+        إنشاء الحساب مجاني. المعروض الواحد بـ{PRICE_PER_LETTER_SAR} ريالاً شاملة الضريبة.
       </p>
     </form>
   );
