@@ -44,6 +44,8 @@ jobs:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5433/maroudak_test?schema=public
       DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5433/maroudak_test?schema=public
+      # المخطط يطلب اتصالاً مباشراً للترحيلات (#D-032) — نفس القاعدة في CI.
+      DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5433/maroudak_test?schema=public
       SESSION_SECRET: ci-only-secret-not-used-anywhere-else-32chars
       NEXT_PUBLIC_APP_URL: http://localhost:3000
       STORAGE_DRIVER: local
@@ -51,10 +53,10 @@ jobs:
 
     steps:
       - name: جلب الشيفرة
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: تهيئة Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -87,9 +89,9 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
