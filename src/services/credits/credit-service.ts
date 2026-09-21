@@ -24,7 +24,20 @@ export type CreditOperation = keyof typeof CREDIT_COSTS;
  */
 export async function costOf(operation: CreditOperation): Promise<number> {
   const settings = await getSettings();
-  return settings.creditCosts[operation];
+  const cost = settings.creditCosts[operation];
+
+  /*
+   * حارس أخير على التكلفة — #D-044
+   *
+   * `spend()` ينفّذ `decrement: cost`، وPrisma تترجم السالب إلى زيادة: تكلفة
+   * `-5` **تمنح** المستخدم خمسة أرصدة عند كل عملية، والدفتر يسجّلها متسقة
+   * فلا ينبّه شيء. المدخل الإداري صار محروساً بقائمة مغلقة، لكن القيمة قد
+   * تصل من مسار آخر (تحرير مباشر للقاعدة · بذرة خاطئة · استيراد لاحق)،
+   * والخسارة هنا نقدية مباشرة. صفر مشروع (أداة مشمولة)، والسالب لا.
+   */
+  if (!Number.isFinite(cost) || cost <= 0) return 0;
+
+  return Math.floor(cost);
 }
 
 /** فحص الكفاية قبل استدعاء الذكاء الاصطناعي — لا خصم هنا. */

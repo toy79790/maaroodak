@@ -5,6 +5,8 @@ import {
   AI_DEFAULTS,
   AI_TOOLS_PER_LETTER,
   CREDIT_COSTS,
+  EFFORT_LEVEL_IDS,
+  RATE_LIMITS,
   SIGNUP_BONUS_CREDITS,
 } from '@/config/constants';
 import { site } from '@/config/site';
@@ -39,6 +41,14 @@ export interface AppSettings {
   aiMaxTokensTools: number;
   aiQualityCheckEnabled: boolean;
   aiFollowUpEnabled: boolean;
+
+  /**
+   * حدود الاستخدام. كانت معروضة في اللوحة ومزروعة في القاعدة ولا يقرؤها
+   * أحد: المسؤول يغيّر الرقم ويُحفظ، والحدّ الفعلي يبقى ثابتاً في الشيفرة
+   * (#D-044).
+   */
+  limitGeneratePerWindow: number;
+  limitAiToolPerWindow: number;
 }
 
 const CACHE_TTL_MS = 60_000;
@@ -57,7 +67,7 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
-const EFFORT_LEVELS: readonly EffortLevel[] = ['low', 'medium', 'high', 'xhigh', 'max'];
+const EFFORT_LEVELS: readonly EffortLevel[] = EFFORT_LEVEL_IDS;
 
 function asEffort(value: unknown, fallback: EffortLevel): EffortLevel {
   return typeof value === 'string' && EFFORT_LEVELS.includes(value as EffortLevel)
@@ -126,6 +136,15 @@ export async function getSettings(): Promise<AppSettings> {
     ),
     aiQualityCheckEnabled: asBoolean(map.get('ai.qualityCheck.enabled'), true),
     aiFollowUpEnabled: asBoolean(map.get('ai.followUp.enabled'), true),
+
+    limitGeneratePerWindow: asNumber(
+      map.get('limits.generatePerWindow'),
+      RATE_LIMITS.generate.limit,
+    ),
+    limitAiToolPerWindow: asNumber(
+      map.get('limits.aiToolPerWindow'),
+      RATE_LIMITS.aiTool.limit,
+    ),
   };
 
   cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };

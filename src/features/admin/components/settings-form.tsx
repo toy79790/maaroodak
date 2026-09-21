@@ -10,6 +10,7 @@ import { Toggle, adminSelectClass } from '@/features/admin/components/admin-form
 import { Card } from '@/components/ui/card';
 import { api, ApiError } from '@/lib/api/client';
 import { cn } from '@/lib/utils/cn';
+import { AI_MODEL_IDS, EFFORT_LEVEL_IDS } from '@/config/constants';
 
 /**
  * إعدادات النظام.
@@ -35,19 +36,34 @@ interface FieldSpec {
   max?: number;
 }
 
-const MODEL_OPTIONS = [
-  { value: 'claude-opus-5', label: 'Claude Opus 5 — الأدق ($5/$25)' },
-  { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 — متوازن ($3/$15)' },
-  { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 — الأرخص ($1/$5)' },
-];
+/*
+ * التسميات هنا، والمعرّفات من `config/constants` — هي نفسها التي يتحقق بها
+ * الخادم في `config/settings-schema`. قائمتان منفصلتان كانتا تسمحان بأن
+ * تعرض اللوحة نموذجاً لا يقبله الخادم أو العكس (#D-044).
+ */
+const MODEL_LABELS: Record<(typeof AI_MODEL_IDS)[number], string> = {
+  'claude-opus-5': 'Claude Opus 5 — الأدق ($5/$25)',
+  'claude-sonnet-5': 'Claude Sonnet 5 — متوازن ($3/$15)',
+  'claude-haiku-4-5': 'Claude Haiku 4.5 — الأرخص ($1/$5)',
+};
 
-const EFFORT_OPTIONS = [
-  { value: 'low', label: 'منخفض — أسرع وأرخص' },
-  { value: 'medium', label: 'متوسط' },
-  { value: 'high', label: 'عالٍ — الافتراضي للتوليد' },
-  { value: 'xhigh', label: 'عالٍ جداً' },
-  { value: 'max', label: 'أقصى — الأدق والأغلى' },
-];
+const MODEL_OPTIONS = AI_MODEL_IDS.map((value) => ({
+  value,
+  label: MODEL_LABELS[value],
+}));
+
+const EFFORT_LABELS: Record<(typeof EFFORT_LEVEL_IDS)[number], string> = {
+  low: 'منخفض — أسرع وأرخص',
+  medium: 'متوسط',
+  high: 'عالٍ — الافتراضي للتوليد',
+  xhigh: 'عالٍ جداً',
+  max: 'أقصى — الأدق والأغلى',
+};
+
+const EFFORT_OPTIONS = EFFORT_LEVEL_IDS.map((value) => ({
+  value,
+  label: EFFORT_LABELS[value],
+}));
 
 const FIELDS: Record<string, FieldSpec> = {
   'platform.name': { label: 'اسم المنصة', kind: 'text' },

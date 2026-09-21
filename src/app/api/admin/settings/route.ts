@@ -3,6 +3,8 @@ import { createAdminHandler } from '@/lib/api/admin-handler';
 import { jsonOk, jsonError } from '@/lib/api/response';
 import { saveSetting } from '@/features/admin/service';
 import { listSettings } from '@/lib/db/repositories/settings-repository';
+import { parseSetting } from '@/config/settings-schema';
+import { errors } from '@/lib/api/errors';
 
 export const GET = createAdminHandler(
   { permission: 'settings:manage' },
@@ -17,7 +19,13 @@ const schema = z.object({
 export const PATCH = createAdminHandler(
   { permission: 'settings:manage', body: schema },
   async ({ body, admin }) => {
-    const result = await saveSetting(admin, body.key, body.value);
+    // المفتاح والقيمة يُتحقَّق منهما معاً: حدود الواجهة لا تحرس الـ API (#D-044).
+    const setting = parseSetting(body.key, body.value);
+    if (!setting.ok) {
+      return jsonError(errors.validation({ value: setting.message }));
+    }
+
+    const result = await saveSetting(admin, body.key, setting.value);
     if (!result.ok) return jsonError(result.error);
     return jsonOk(null);
   },

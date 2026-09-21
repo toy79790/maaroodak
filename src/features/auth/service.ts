@@ -226,16 +226,29 @@ export async function resetPassword(
 
   const passwordHash = await hashPassword(input.password);
 
-  await prisma.$transaction([
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    }),
-    prisma.user.update({
-      where: { id: record.userId },
-      data: { passwordHash },
-    }),
-  ]);
+  /*
+   * الاستهلاك بـ`updateMany` مشروطاً بـ`usedAt: null` لا بـ`update` على
+   * المعرّف: الفحص أعلاه قراءة، وبين القراءة والكتابة تتسع نافذة يمر فيها
+   * طلبان بالرمز نفسه. العدّاد صفر يعني أن غيرنا سبقنا — نتوقف (#D-044).
+   */
+  const claimed = await prisma.passwordResetToken.updateMany({
+    where: { id: record.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  if (claimed.count === 0) {
+    return fail(
+      errors.validation(
+        { token: 'رابط الاستعادة منتهٍ أو مستخدم مسبقاً.' },
+        'رابط الاستعادة غير صالح.',
+      ),
+    );
+  }
+
+  await prisma.user.update({
+    where: { id: record.userId },
+    data: { passwordHash },
+  });
 
   // استعادة كلمة المرور تعني احتمال اختراق — تُبطل كل الجلسات بلا استثناء.
   await revokeAllSessions(record.userId);

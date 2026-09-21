@@ -10,6 +10,7 @@ import { computeCostUsd } from '@/services/ai/usage-tracker';
 import { getSettings } from '@/lib/db/repositories/settings-repository';
 import { LLMError } from '@/services/ai/ports';
 import { AppError } from '@/lib/api/errors';
+import { AI_MODEL_IDS } from '@/config/constants';
 
 export const GET = createAdminHandler(
   { permission: 'prompt:manage' },
@@ -34,7 +35,8 @@ export const POST = createAdminHandler(
 const testSchema = z.object({
   content: z.string().min(10).max(20000),
   sampleFacts: z.string().max(4000).default(''),
-  model: z.string().max(60).optional(),
+  // قائمة مغلقة لا نص حر: معرّف مجهول يُمرَّر إلى المزوّد فيفشل النداء (#D-044).
+  model: z.enum(AI_MODEL_IDS).optional(),
 });
 
 export const PUT = createAdminHandler(

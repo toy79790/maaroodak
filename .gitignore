@@ -22,9 +22,10 @@ test-results/
 .pgdata/
 
 # env
-.env
-.env.local
-.env.*.local
+# كل صيغ .env محجوبة والقالب وحده مستثنى.
+# القائمة السابقة كانت تعدّد الصيغ، فكان .env.production (بلا .local)
+# يمرّ إلى المستودع محمّلاً بكلمة مرور القاعدة ومفتاح Anthropic. (#D-044)
+.env*
 !.env.example
 
 # logs

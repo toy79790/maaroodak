@@ -70,6 +70,22 @@ export const RATE_LIMITS = {
 } as const;
 
 // --- الذكاء الاصطناعي --------------------------------------------------------
+
+/**
+ * النماذج التي يجوز اختيارها من لوحة التحكم — مصدر واحد للواجهة والخادم.
+ *
+ * كانت القائمة في مكوّن النموذج وحده، والخادم يقبل أي نص. مُعرِّف مكتوب
+ * خطأً كان يُخزَّن بلا اعتراض ثم يُسقط كل توليد عند أول نداء (#D-044).
+ */
+export const AI_MODEL_IDS = [
+  'claude-opus-5',
+  'claude-sonnet-5',
+  'claude-haiku-4-5',
+] as const;
+
+/** مستويات العمق — مطابقة لـ`EffortLevel` في `services/ai/ports`. */
+export const EFFORT_LEVEL_IDS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+
 export const AI_DEFAULTS = {
   generateModel: 'claude-opus-5',
   toolsModel: 'claude-sonnet-5',

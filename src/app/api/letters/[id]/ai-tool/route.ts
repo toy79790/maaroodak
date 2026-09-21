@@ -6,6 +6,7 @@ import { assertUser } from '@/lib/auth/guards';
 import { errors } from '@/lib/api/errors';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { RATE_LIMITS } from '@/config/constants';
+import { getSettings } from '@/lib/db/repositories/settings-repository';
 import { AI_TOOLS, runAiTool } from '@/features/letters/ai-tools-service';
 
 const schema = z.object({
@@ -24,7 +25,12 @@ export async function POST(
     const { user } = await assertUser();
     const { id } = await context.params;
 
-    const limit = await rateLimit('ai-tool', user.id, RATE_LIMITS.aiTool);
+    // الحدّ من الإعدادات لا من الثابت: اللوحة تعرضه ويجب أن يسري (#D-044).
+    const { limitAiToolPerWindow } = await getSettings();
+    const limit = await rateLimit('ai-tool', user.id, {
+      limit: limitAiToolPerWindow,
+      windowMs: RATE_LIMITS.aiTool.windowMs,
+    });
     if (!limit.allowed) return jsonError(errors.rateLimited(limit.retryAfter));
 
     const parsed = schema.safeParse(await request.json());
