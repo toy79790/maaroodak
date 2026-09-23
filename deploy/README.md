@@ -126,6 +126,7 @@ sudo chmod 600 /srv/maroudak/shared/.env
 ```
 
 ```env
+# ⚠️ APP_ENV إلزامي: بدونه يرفض الخادم الإقلاع (#D-048) — لا تحذفه.
 APP_ENV=production
 NODE_ENV=production
 

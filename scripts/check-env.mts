@@ -27,6 +27,12 @@ const SCENARIOS: Scenario[] = [
     expect: 'pass',
   },
   {
+    // #D-048: بلا APP_ENV كان الخادم يُقلع كبيئة تطوير ويكشف روابط الاستعادة.
+    name: 'رفض وضع الإنتاج بلا APP_ENV صريح',
+    env: { ...BASE },
+    expect: 'fail',
+  },
+  {
     name: 'رفض السرّ الافتراضي',
     env: {
       ...BASE,

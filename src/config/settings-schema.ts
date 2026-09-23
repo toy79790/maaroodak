@@ -59,6 +59,18 @@ export function isSettingKey(key: string): key is SettingKey {
   return Object.prototype.hasOwnProperty.call(SETTING_SCHEMAS, key);
 }
 
+/**
+ * الصلاحية المطلوبة لتعديل إعداد — #D-048
+ *
+ * `settings:manage` تكفي لمعظم الإعدادات، لكن إعدادات الرصيد تساوي **منح
+ * رصيد**: مكافأة تسجيل 1000 ثم حسابات جديدة، أو تكلفة توليد صفر. وهذا ما
+ * حُجبت `user:manage` عن `ADMIN` لأجله (#D-006 · #D-044)، فالحدود وحدها لم
+ * تكن تسدّ الباب — القيمة 1000 داخل مداها. إعدادات الرصيد لمن يملك الأرصدة.
+ */
+export function requiredPermissionFor(key: SettingKey): 'settings:manage' | 'user:manage' {
+  return key.startsWith('credits.') ? 'user:manage' : 'settings:manage';
+}
+
 export type SettingParseResult =
   | { ok: true; value: string | number | boolean }
   | { ok: false; message: string };
