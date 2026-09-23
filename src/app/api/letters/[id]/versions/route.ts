@@ -4,6 +4,7 @@ import { jsonOk, jsonError, zodFieldErrors } from '@/lib/api/response';
 import { assertSameOrigin } from '@/lib/security/cors';
 import { assertUser } from '@/lib/auth/guards';
 import { errors } from '@/lib/api/errors';
+import { readJsonBody } from '@/lib/api/request';
 import { listVersions, restoreVersion } from '@/features/letters/service';
 
 export async function GET(
@@ -33,7 +34,7 @@ export async function POST(
     const { user } = await assertUser();
     const { id } = await context.params;
 
-    const parsed = restoreSchema.safeParse(await request.json());
+    const parsed = restoreSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return jsonError(errors.validation(zodFieldErrors(parsed.error.issues)));
     }

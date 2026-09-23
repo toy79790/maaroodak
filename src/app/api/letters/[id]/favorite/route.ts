@@ -4,6 +4,7 @@ import { jsonOk, jsonError, zodFieldErrors } from '@/lib/api/response';
 import { assertSameOrigin } from '@/lib/security/cors';
 import { assertUser } from '@/lib/auth/guards';
 import { errors } from '@/lib/api/errors';
+import { readJsonBody } from '@/lib/api/request';
 import { setFavorite } from '@/features/letters/service';
 
 const schema = z.object({ value: z.boolean() });
@@ -17,7 +18,7 @@ export async function POST(
     const { user } = await assertUser();
     const { id } = await context.params;
 
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return jsonError(errors.validation(zodFieldErrors(parsed.error.issues)));
     }

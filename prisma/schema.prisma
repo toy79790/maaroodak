@@ -565,6 +565,8 @@ model Letter {
   /// تقرير الفحص الثماني — docs/AI_SYSTEM.md §7
   qualityReport  Json?
   currentVersion Int          @default(1)
+  /// أدوات AI المحجوزة على هذا المعروض — يُحجز قبل النداء ويُفلت عند فشله (#D-042 · #D-046)
+  aiToolUses     Int          @default(0)
   isFavorite     Boolean      @default(false)
   deletedAt      DateTime?
   createdAt      DateTime     @default(now())

@@ -228,6 +228,103 @@ describe('generateLetter — مسارات الفشل', () => {
   });
 });
 
+describe('generateLetter — حجز المقابلة (#D-045)', () => {
+  it('لا يولّد مرة ثانية من مقابلة حُوّلت، ولا يخصم', async () => {
+    fake.setBehavior({ text: LETTER_BODY, structured: passingQualityReport() });
+    const { user, sessionId } = await seedScenario({ credits: 5 });
+
+    const first = await generateLetter(user.id, scope, sessionId);
+    expect(first.ok).toBe(true);
+    const callsAfterFirst = fake.textRequests.length;
+
+    const second = await generateLetter(user.id, scope, sessionId);
+
+    expect(second.ok).toBe(false);
+    if (second.ok) return;
+    expect(second.error.code).toBe('CONFLICT');
+    expect(fake.textRequests.length).toBe(callsAfterFirst);
+    expect(await testDb.letter.count({ where: { userId: user.id } })).toBe(1);
+
+    const after = await testDb.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { creditBalance: true },
+    });
+    expect(after.creditBalance).toBe(4);
+  });
+
+  it('طلبان متزامنان للمقابلة نفسها ⇒ معروض واحد وخصم واحد', async () => {
+    fake.setBehavior({ text: LETTER_BODY, structured: passingQualityReport() });
+    const { user, sessionId } = await seedScenario({ credits: 5 });
+
+    const results = await Promise.all([
+      generateLetter(user.id, scope, sessionId),
+      generateLetter(user.id, scope, sessionId),
+    ]);
+
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    const rejected = results.find((result) => !result.ok);
+    expect(rejected && !rejected.ok ? rejected.error.code : null).toBe('CONFLICT');
+
+    expect(await testDb.letter.count({ where: { userId: user.id } })).toBe(1);
+    const after = await testDb.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { creditBalance: true },
+    });
+    expect(after.creditBalance).toBe(4);
+  });
+
+  it('الفشل يُعيد المقابلة قيد التعبئة لتُعاد المحاولة', async () => {
+    const { user, sessionId } = await seedScenario({ credits: 3 });
+
+    const { LLMError } = await import('@/services/ai/ports');
+    fake.setBehavior({ error: new LLMError('timeout', 'انتهت المهلة') });
+
+    const failed = await generateLetter(user.id, scope, sessionId);
+    expect(failed.ok).toBe(false);
+
+    const session = await testDb.interviewSession.findUniqueOrThrow({
+      where: { id: sessionId },
+      select: { status: true },
+    });
+    expect(session.status).toBe('IN_PROGRESS');
+
+    fake.setBehavior({ text: LETTER_BODY, structured: passingQualityReport() });
+    const retried = await generateLetter(user.id, scope, sessionId);
+    expect(retried.ok).toBe(true);
+  });
+
+  it('حجز عملية ماتت يسقط بعد المهلة', async () => {
+    fake.setBehavior({ text: LETTER_BODY, structured: passingQualityReport() });
+    const { user, sessionId } = await seedScenario({ credits: 3 });
+
+    // محاكاة عملية حجزت المقابلة ثم ماتت قبل ساعة.
+    await testDb.interviewSession.update({
+      where: { id: sessionId },
+      data: { status: 'COMPLETED', lastActiveAt: new Date(Date.now() - 60 * 60_000) },
+    });
+
+    const result = await generateLetter(user.id, scope, sessionId);
+    expect(result.ok).toBe(true);
+  });
+
+  it('حجز حديث يمنع طلباً ثانياً', async () => {
+    fake.setBehavior({ text: LETTER_BODY });
+    const { user, sessionId } = await seedScenario({ credits: 3 });
+
+    await testDb.interviewSession.update({
+      where: { id: sessionId },
+      data: { status: 'COMPLETED', lastActiveAt: new Date() },
+    });
+
+    const result = await generateLetter(user.id, scope, sessionId);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('CONFLICT');
+    expect(fake.textRequests).toHaveLength(0);
+  });
+});
+
 describe('generateLetter — الضوابط', () => {
   it('يعيد التوليد مرة واحدة عند اختراع أرقام، ويأخذ الأفضل', async () => {
     // المحاولة الأولى تخترع رقماً؛ الثانية نظيفة.
