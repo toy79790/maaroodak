@@ -21,6 +21,7 @@ import { recordEvent } from '@/services/analytics/analytics-service';
 import { AppError, errors, fail, ok, type Result } from '@/lib/api/errors';
 import { logger } from '@/lib/logging/logger';
 import { getSettings } from '@/lib/db/repositories/settings-repository';
+import { GENERATION_LOCK_STALE_MS } from '@/config/constants';
 import { textToHtml } from '@/features/letters/html';
 import type { QualityReport } from '@/services/ai/schemas';
 import type { ScanResult } from '@/services/ai/guardrails';
@@ -48,6 +49,20 @@ export interface GenerateResult {
   creditBalance: number;
 }
 
+const SESSION_SELECT = {
+  id: true,
+  answers: true,
+  status: true,
+  department: {
+    select: { id: true, name: true, slug: true, addressee: true, honorific: true },
+  },
+  requestType: { select: { id: true, name: true, slug: true } },
+} satisfies Prisma.InterviewSessionSelect;
+
+type GenerationSession = Prisma.InterviewSessionGetPayload<{
+  select: typeof SESSION_SELECT;
+}>;
+
 export async function generateLetter(
   userId: string,
   scope: TenantScope,
@@ -65,19 +80,89 @@ export async function generateLetter(
   // --- 1) الجلسة والملكية ---------------------------------------------------
   const session = await prisma.interviewSession.findFirst({
     where: { id: sessionId, userId },
-    select: {
-      id: true,
-      answers: true,
-      status: true,
-      department: {
-        select: { id: true, name: true, slug: true, addressee: true, honorific: true },
-      },
-      requestType: { select: { id: true, name: true, slug: true } },
-    },
+    select: SESSION_SELECT,
   });
 
   if (!session) return fail(errors.notFound('المقابلة غير موجودة.'));
 
+  /*
+   * حجز المقابلة قبل أي شيء — #D-045
+   *
+   * بلا حجز كان طلبان للمقابلة نفسها (نقرة مزدوجة، أو إعادة إرسال بعد انتظار
+   * طويل) يُنتجان معروضين ويخصمان مرتين، وكانت مقابلة حُوّلت قبلاً تُولَّد
+   * من جديد بخصم جديد. الحجز ذرّي: شرط الحالة داخل `updateMany` نفسه.
+   */
+  const claimedAt = await claimSession(session.id, userId);
+
+  if (!claimedAt) {
+    if (session.status === 'CONVERTED') {
+      return fail(
+        errors.conflict('أُنشئ معروض من هذه المقابلة مسبقاً. تجده في صفحة معاريضي.'),
+      );
+    }
+    if (session.status === 'ABANDONED') {
+      return fail(errors.notFound('المقابلة غير موجودة.'));
+    }
+    return fail(
+      errors.conflict('يجري توليد معروض من هذه المقابلة الآن. انتظر قليلاً ثم حدّث الصفحة.'),
+    );
+  }
+
+  let result: Result<GenerateResult> | undefined;
+  try {
+    result = await generateClaimed(userId, scope, session, claimedAt, provider);
+    return result;
+  } finally {
+    // أي فشل — متوقَّع أو استثناء — يُعيد المقابلة للمستخدم ليعدّل ويعيد المحاولة.
+    if (!result?.ok) await releaseSession(session.id, claimedAt);
+  }
+}
+
+/**
+ * يحجز المقابلة للتوليد ويُرجع طابع الحجز، أو null إن لم تكن متاحة.
+ *
+ * `COMPLETED` = «اكتملت الإجابات ويجري التوليد». `lastActiveAt` يحمل طابع
+ * الحجز نفسه، فيصير رمز سياج: الإفلات والتحويل لا ينفّذهما إلا من يملك الحجز.
+ */
+async function claimSession(sessionId: string, userId: string): Promise<Date | null> {
+  const claimedAt = new Date();
+  const staleBefore = new Date(claimedAt.getTime() - GENERATION_LOCK_STALE_MS);
+
+  const claimed = await prisma.interviewSession.updateMany({
+    where: {
+      id: sessionId,
+      userId,
+      OR: [
+        { status: 'IN_PROGRESS' },
+        // حجز عملية ماتت في منتصف التوليد — لا تبقى المقابلة مقفلة للأبد.
+        { status: 'COMPLETED', lastActiveAt: { lt: staleBefore } },
+      ],
+    },
+    data: { status: 'COMPLETED', lastActiveAt: claimedAt },
+  });
+
+  return claimed.count === 1 ? claimedAt : null;
+}
+
+async function releaseSession(sessionId: string, claimedAt: Date): Promise<void> {
+  await prisma.interviewSession
+    .updateMany({
+      where: { id: sessionId, status: 'COMPLETED', lastActiveAt: claimedAt },
+      data: { status: 'IN_PROGRESS' },
+    })
+    .catch((error: unknown) => {
+      // الحجز يسقط وحده بعد GENERATION_LOCK_STALE_MS — لا نحجب الرد بسببه.
+      logger.error('تعذّر إفلات حجز المقابلة', { scope: 'ai', error });
+    });
+}
+
+async function generateClaimed(
+  userId: string,
+  scope: TenantScope,
+  session: GenerationSession,
+  claimedAt: Date,
+  provider: ReturnType<typeof getProvider>,
+): Promise<Result<GenerateResult>> {
   // --- 2) الرصيد (فحص فقط) -------------------------------------------------
   const canSpend = await assertCanSpend(userId, 'GENERATE_LETTER');
   if (!canSpend.ok) return fail(canSpend.error);
@@ -284,10 +369,15 @@ export async function generateLetter(
         tx,
       );
 
-      await tx.interviewSession.update({
-        where: { id: session.id },
+      // مشروط بالحجز: لو سقط حجزنا وحجزها طلب آخر، نتراجع عن كل شيء بلا خصم.
+      const converted = await tx.interviewSession.updateMany({
+        where: { id: session.id, status: 'COMPLETED', lastActiveAt: claimedAt },
         data: { status: 'CONVERTED', letterId: created.id },
       });
+
+      if (converted.count === 0) {
+        throw errors.conflict('انتهت مهلة التوليد قبل الحفظ. أعد المحاولة.');
+      }
 
       return { letter: created, balance: spent.data.balanceAfter };
     });

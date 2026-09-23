@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { LetterStatus, Prisma, VersionSource } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
-import { errors, fail, ok, type Result } from '@/lib/api/errors';
+import { AppError, errors, fail, ok, type Result } from '@/lib/api/errors';
 import { htmlToText, sanitizeHtml } from '@/features/letters/html';
 import { recordEvent } from '@/services/analytics/analytics-service';
 import { LIMITS } from '@/config/constants';
@@ -25,6 +25,7 @@ const LETTER_SELECT = {
   status: true,
   qualityReport: true,
   currentVersion: true,
+  aiToolUses: true,
   isFavorite: true,
   createdAt: true,
   updatedAt: true,
@@ -153,6 +154,11 @@ export interface UpdateLetterInput {
   title?: string;
   contentHtml?: string;
   note?: string;
+  /**
+   * النسخة التي بُني عليها التعديل. إن تغيّر المعروض بعدها يُرفض التعديل
+   * بـ CONFLICT بدل أن يكتب فوق ما حُفظ في الأثناء — #D-047.
+   */
+  expectedVersion?: number;
 }
 
 /**
@@ -166,10 +172,15 @@ export async function updateLetter(
   letterId: string,
   input: UpdateLetterInput,
   source: VersionSource = 'USER_EDIT',
+  /**
+   * عمل إضافي داخل معاملة التعديل نفسها (خصم أداة AI مثلاً). رميُه يُلغي
+   * التعديل كله؛ ويُرمى AppError فيُعاد كما هو.
+   */
+  withinTransaction?: (tx: Prisma.TransactionClient) => Promise<void>,
 ): Promise<Result<LetterDetail>> {
   const existing = await prisma.letter.findFirst({
     where: { id: letterId, userId, deletedAt: null },
-    select: { id: true, currentVersion: true, title: true, contentHtml: true },
+    select: { id: true, title: true, contentHtml: true },
   });
 
   if (!existing) return fail(errors.notFound('المعروض غير موجود.'));
@@ -183,53 +194,74 @@ export async function updateLetter(
   const unchanged =
     title === existing.title && contentHtml === existing.contentHtml;
 
-  if (unchanged) {
-    const current = await getLetter(userId, letterId);
-    return current;
-  }
-
   if (contentHtml.length > LIMITS.letterHtml) {
     return fail(
       errors.validation({ contentHtml: 'المحتوى تجاوز الحد الأقصى المسموح.' }),
     );
   }
 
-  const nextVersion = existing.currentVersion + 1;
+  try {
+    if (unchanged) {
+      if (withinTransaction) await prisma.$transaction(withinTransaction);
+      return getLetter(userId, letterId);
+    }
 
-  const letter = await prisma.$transaction(async (tx) => {
-    const updated = await tx.letter.update({
-      where: { id: existing.id },
-      data: {
-        title,
-        contentHtml,
-        contentText: htmlToText(contentHtml),
-        currentVersion: nextVersion,
-        status: 'EDITED',
-      },
-      select: LETTER_SELECT,
+    const letter = await prisma.$transaction(async (tx) => {
+      /*
+       * رقم النسخة من الزيادة الذرّية لا من قراءة سابقة — #D-046
+       *
+       * كان `currentVersion + 1` يُحسب من قراءة خارج المعاملة، فتعديلان
+       * متزامنان (حفظ يدوي وأداة AI) يُدخلان النسخة نفسها ويصطدمان بـ
+       * `@@unique([letterId, version])` فيرجع 500. `increment` يقفل الصف،
+       * فالثاني ينتظر الأول ويأخذ الرقم التالي.
+       */
+      const updated = await tx.letter.update({
+        where: { id: existing.id },
+        data: {
+          title,
+          contentHtml,
+          contentText: htmlToText(contentHtml),
+          currentVersion: { increment: 1 },
+          status: 'EDITED',
+        },
+        select: LETTER_SELECT,
+      });
+
+      // الزيادة أعلاه أقفلت الصف، فالرقم الناتج يكشف أي تعديل سبقنا.
+      if (
+        input.expectedVersion !== undefined &&
+        updated.currentVersion !== input.expectedVersion + 1
+      ) {
+        throw errors.conflict('تغيّر المعروض أثناء التنفيذ. لم يُطبَّق أي تعديل.');
+      }
+
+      await tx.letterVersion.create({
+        data: {
+          letterId: existing.id,
+          version: updated.currentVersion,
+          title,
+          contentHtml,
+          source,
+          note: input.note ?? null,
+          createdById: userId,
+        },
+      });
+
+      if (withinTransaction) await withinTransaction(tx);
+
+      return updated;
     });
 
-    await tx.letterVersion.create({
-      data: {
-        letterId: existing.id,
-        version: nextVersion,
-        title,
-        contentHtml,
-        source,
-        note: input.note ?? null,
-        createdById: userId,
-      },
+    await recordEvent('letter_edited', {
+      userId,
+      props: { letterId, version: letter.currentVersion, source },
     });
 
-    return updated;
-  });
-
-  await recordEvent('letter_edited', {
-    userId,
-    props: { letterId, version: nextVersion, source },
-  });
-
-  return ok(letter);
+    return ok(letter);
+  } catch (thrown) {
+    if (thrown instanceof AppError) return fail(thrown);
+    throw thrown;
+  }
 }
 
 export async function listVersions(userId: string, letterId: string) {

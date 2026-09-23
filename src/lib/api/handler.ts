@@ -4,7 +4,8 @@ import type { NextRequest } from 'next/server';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { jsonError, zodFieldErrors } from '@/lib/api/response';
-import { errors, AppError } from '@/lib/api/errors';
+import { readJsonBody } from '@/lib/api/request';
+import { errors } from '@/lib/api/errors';
 import { clientIp, rateLimit, type RateLimitRule } from '@/lib/security/rate-limit';
 import { assertSameOrigin } from '@/lib/security/cors';
 import { events } from '@/lib/logging/logger';
@@ -64,7 +65,7 @@ export function createHandler<TBody>(
       let body = undefined as TBody;
 
       if (options.body) {
-        const raw = await readJson(request);
+        const raw = await readJsonBody(request);
         const parsed = options.body.safeParse(raw);
         if (!parsed.success) {
           throw errors.validation(zodFieldErrors(parsed.error.issues));
@@ -104,14 +105,6 @@ export function createHandler<TBody>(
   };
 }
 
-async function readJson(request: NextRequest): Promise<unknown> {
-  try {
-    const text = await request.text();
-    return text.length === 0 ? {} : JSON.parse(text);
-  } catch {
-    throw new AppError('VALIDATION', { message: 'صيغة الطلب غير صالحة.' });
-  }
-}
 
 function isFrameworkError(thrown: unknown): boolean {
   return (

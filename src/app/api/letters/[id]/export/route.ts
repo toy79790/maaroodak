@@ -3,6 +3,7 @@ import { jsonError } from '@/lib/api/response';
 import { assertUser } from '@/lib/auth/guards';
 import { errors } from '@/lib/api/errors';
 import { getLetter } from '@/features/letters/service';
+import { sanitizeHtml } from '@/features/letters/html';
 import { buildDocx } from '@/services/export/docx';
 import { recordEvent } from '@/services/analytics/analytics-service';
 
@@ -76,11 +77,14 @@ export async function GET(
         props: { letterId: id, format: 'html' },
       });
 
-      return new Response(letter.contentHtml, {
+      // تعقيم عند الإخراج أيضاً لا عند الحفظ وحده — لا نثق بما في القاعدة
+      // (docs/SECURITY.md §7 · #D-046). الملف يُفتح خارج حماية التطبيق كلها.
+      return new Response(sanitizeHtml(letter.contentHtml), {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
           'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`${fileName}.html`)}`,
           'X-Content-Type-Options': 'nosniff',
+          'Cache-Control': 'private, no-store',
         },
       });
     }

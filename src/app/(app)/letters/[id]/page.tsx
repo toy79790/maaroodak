@@ -6,7 +6,6 @@ import { LetterWorkspace } from '@/features/letters/components/letter-workspace'
 import { scan } from '@/services/ai/guardrails';
 import { htmlToText } from '@/features/letters/html';
 import { isAIConfigured } from '@/config/env';
-import { countToolUses } from '@/services/credits/credit-service';
 import { getSettings } from '@/lib/db/repositories/settings-repository';
 import type { QualityReport } from '@/services/ai/schemas';
 import type { AnswerMap } from '@/types/questions';
@@ -38,10 +37,7 @@ export default async function LetterPage({
 
   const guardrails = scan({ output: htmlToText(letter.contentHtml), facts });
 
-  const [settings, toolsUsed] = await Promise.all([
-    getSettings(),
-    countToolUses(user.id, letter.id),
-  ]);
+  const settings = await getSettings();
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -67,7 +63,7 @@ export default async function LetterPage({
         placeholders={guardrails.placeholders}
         creditBalance={user.creditBalance}
         toolsLimit={settings.aiToolsPerLetter}
-        toolsRemaining={Math.max(settings.aiToolsPerLetter - toolsUsed, 0)}
+        toolsRemaining={Math.max(settings.aiToolsPerLetter - letter.aiToolUses, 0)}
         aiEnabled={isAIConfigured}
       />
     </div>

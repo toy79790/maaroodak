@@ -100,7 +100,7 @@ departmentId = Y,    requestTypeId = null  →  لكل طلبات هذه الج�
 | الجدول | الحقول المحورية |
 |---|---|
 | `InterviewSession` | `userId`, `departmentId`, `requestTypeId`, `answers Json`, `currentStep`, `status`, `letterId?`, `lastActiveAt` |
-| `Letter` | `userId`, `organizationId?`, `title`, `subject`, `contentHtml`, `contentText`, `answers Json`, `status`, `qualityReport Json?`, `currentVersion`, `isFavorite`, `departmentId`, `requestTypeId`, `templateId?`, `deletedAt` |
+| `Letter` | `userId`, `organizationId?`, `title`, `subject`, `contentHtml`, `contentText`, `answers Json`, `status`, `qualityReport Json?`, `currentVersion`, `aiToolUses` (حجز حد الأدوات — #D-046), `isFavorite`, `departmentId`, `requestTypeId`, `templateId?`, `deletedAt` |
 | `LetterVersion` | `letterId`, `version`, `title`, `contentHtml`, `source`, `note`, `createdById` | `(letterId, version)` فريد |
 | `Feedback` | `letterId`, `userId`, `rating`, `comment`, `categories String[]` |
 

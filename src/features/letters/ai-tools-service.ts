@@ -1,6 +1,6 @@
 import 'server-only';
 
-import type { AIOperation, PromptType } from '@prisma/client';
+import type { AIOperation, Prisma, PromptType } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 import { loadQuestionBundle, type TenantScope } from '@/lib/db/repositories/catalog-repository';
 import { resolvePrompt } from '@/lib/db/repositories/prompt-repository';
@@ -10,8 +10,8 @@ import { getProvider } from '@/services/ai/providers/anthropic';
 import { LLMError } from '@/services/ai/ports';
 import { computeState } from '@/services/questions/engine';
 import { extractNumbers } from '@/lib/utils/arabic';
-import { htmlToText, textToHtml } from '@/features/letters/html';
-import { assertCanSpend, countToolUses, spend } from '@/services/credits/credit-service';
+import { htmlToText, replaceTextInHtml, textToHtml } from '@/features/letters/html';
+import { assertCanSpend, spend } from '@/services/credits/credit-service';
 import { recordFailure, recordUsage } from '@/services/ai/usage-tracker';
 import { recordEvent } from '@/services/analytics/analytics-service';
 import { updateLetter } from '@/features/letters/service';
@@ -97,15 +97,7 @@ export async function runAiTool(
 
   const letter = await prisma.letter.findFirst({
     where: { id: letterId, userId, deletedAt: null },
-    select: {
-      id: true,
-      title: true,
-      contentHtml: true,
-      contentText: true,
-      answers: true,
-      department: { select: { id: true, name: true } },
-      requestType: { select: { id: true, name: true } },
-    },
+    select: TOOL_LETTER_SELECT,
   });
 
   if (!letter) return fail(errors.notFound('المعروض غير موجود.'));
@@ -113,26 +105,145 @@ export async function runAiTool(
   const canSpend = await assertCanSpend(userId, 'AI_TOOL');
   if (!canSpend.ok) return fail(canSpend.error);
 
-  const [settings, prompt, toolsUsed] = await Promise.all([
+  const [settings, prompt] = await Promise.all([
     getSettings(),
     resolvePrompt(scope, TOOL_PROMPT_TYPE[input.tool]),
-    countToolUses(userId, letterId),
   ]);
 
-  // الحد قبل نداء النموذج لا بعده: التكلفة تقع عند النداء نفسه (#D-042).
-  if (toolsUsed >= settings.aiToolsPerLetter) {
+  if (!prompt) {
+    return fail(errors.internal(new Error(`لا يوجد موجّه للأداة ${input.tool}.`)));
+  }
+
+  // التحديد إن وُجد، وإلا المعروض كاملاً.
+  const selection = input.selection?.trim() ?? '';
+  const usedSelection = selection.length > 0 && !SUGGESTION_ONLY_TOOLS.has(input.tool);
+
+  // التحقق من إمكان الاستبدال **قبل** النداء: التكلفة تقع عند النداء نفسه.
+  if (usedSelection && replaceTextInHtml(letter.contentHtml, selection, '') === null) {
+    return fail(
+      errors.validation(
+        { selection: 'النص المحدَّد غير موجود في المعروض المحفوظ.' },
+        'تعذّر العثور على النص المحدَّد. احفظ تعديلاتك ثم حدّد النص من جديد.',
+      ),
+    );
+  }
+
+  /*
+   * حجز الاستخدام قبل النداء — #D-046
+   *
+   * الحد كان يُعدّ من الدفتر، والدفتر لا يُكتب إلا بعد النداء: عشرة طلبات
+   * متزامنة ترى العدد نفسه وتمرّ كلها، وكل واحد نداء مدفوع. الحجز زيادة
+   * مشروطة في `updateMany` — لا يمرّ منها إلا ما يتسع له الحد.
+   */
+  const reserved = await reserveToolUse(userId, letterId, settings.aiToolsPerLetter);
+
+  if (reserved === null) {
     return fail(
       new AppError('QUOTA_EXCEEDED', {
         message: `استخدمت التحسينات المشمولة لهذا المعروض (${settings.aiToolsPerLetter}). يمكنك مواصلة التعديل يدوياً في المحرر بلا حدود.`,
       }),
     );
   }
-  // هذا الاستخدام نفسه يُحتسب فور نجاحه.
-  const toolsRemaining = Math.max(settings.aiToolsPerLetter - toolsUsed - 1, 0);
 
-  if (!prompt) {
-    return fail(errors.internal(new Error(`لا يوجد موجّه للأداة ${input.tool}.`)));
+  // يُضبط حين يُثبَّت الاستخدام في القاعدة (خصم أو تعديل) — لا قبل ولا بعد.
+  const progress = { committed: false };
+  try {
+    return await executeTool({
+      userId,
+      scope,
+      letterId,
+      input,
+      letter,
+      settings,
+      prompt,
+      provider,
+      selection,
+      usedSelection,
+      toolsRemaining: Math.max(settings.aiToolsPerLetter - reserved, 0),
+      progress,
+    });
+  } finally {
+    /*
+     * الإفلات بحسب ما ثُبّت لا بحسب النتيجة: خطأ في التسجيل بعد تثبيت
+     * الخصم كان يُفلت حجزاً دُفع ثمنه، فيصير الاستخدام مجانياً (#D-047).
+     */
+    if (!progress.committed) await releaseToolUse(letterId);
   }
+}
+
+/** يحجز استخداماً ويُرجع العدد بعده، أو null إن بلغ الحد. */
+async function reserveToolUse(
+  userId: string,
+  letterId: string,
+  limit: number,
+): Promise<number | null> {
+  const reserved = await prisma.letter.updateMany({
+    where: { id: letterId, userId, deletedAt: null, aiToolUses: { lt: limit } },
+    data: { aiToolUses: { increment: 1 } },
+  });
+
+  if (reserved.count === 0) return null;
+
+  const letter = await prisma.letter.findUniqueOrThrow({
+    where: { id: letterId },
+    select: { aiToolUses: true },
+  });
+  return letter.aiToolUses;
+}
+
+async function releaseToolUse(letterId: string): Promise<void> {
+  await prisma.letter
+    .updateMany({
+      where: { id: letterId, aiToolUses: { gt: 0 } },
+      data: { aiToolUses: { decrement: 1 } },
+    })
+    .catch((error: unknown) => {
+      // الأسوأ استخدام محتسب بلا نتيجة — لا نحجب الرد بسببه.
+      console.error('[ai-tool] تعذّر إفلات حجز الاستخدام', error);
+    });
+}
+
+const TOOL_LETTER_SELECT = {
+  id: true,
+  title: true,
+  contentHtml: true,
+  contentText: true,
+  currentVersion: true,
+  answers: true,
+  department: { select: { id: true, name: true } },
+  requestType: { select: { id: true, name: true } },
+} satisfies Prisma.LetterSelect;
+
+interface ToolExecution {
+  userId: string;
+  scope: TenantScope;
+  letterId: string;
+  input: RunToolInput;
+  letter: Prisma.LetterGetPayload<{ select: typeof TOOL_LETTER_SELECT }>;
+  settings: Awaited<ReturnType<typeof getSettings>>;
+  prompt: NonNullable<Awaited<ReturnType<typeof resolvePrompt>>>;
+  provider: ReturnType<typeof getProvider>;
+  selection: string;
+  usedSelection: boolean;
+  toolsRemaining: number;
+  progress: { committed: boolean };
+}
+
+async function executeTool(ctx: ToolExecution): Promise<Result<RunToolResult>> {
+  const {
+    userId,
+    scope,
+    letterId,
+    input,
+    letter,
+    settings,
+    prompt,
+    provider,
+    selection,
+    usedSelection,
+    toolsRemaining,
+    progress,
+  } = ctx;
 
   const answers = (letter.answers ?? {}) as AnswerMap;
   const needsFacts = FACT_SENSITIVE.has(input.tool);
@@ -155,11 +266,7 @@ export async function runAiTool(
     facts = Object.values(answers).map((value) => String(value ?? ''));
   }
 
-  // التحديد إن وُجد، وإلا المعروض كاملاً.
-  const targetText =
-    input.selection && input.selection.trim().length > 0
-      ? input.selection.trim()
-      : letter.contentText;
+  const targetText = selection.length > 0 ? selection : letter.contentText;
 
   const ai = new AIService(provider);
   const model = settings.aiModelTools;
@@ -255,6 +362,7 @@ export async function runAiTool(
     });
 
     if (!spent.ok) return fail(spent.error);
+    progress.committed = true;
 
     await recordUsage({
       operation: TOOL_OPERATION[input.tool],
@@ -279,36 +387,71 @@ export async function runAiTool(
   }
 
   // --- أدوات التعديل ------------------------------------------------------
-  const usedSelection =
-    input.selection !== undefined &&
-    input.selection !== null &&
-    input.selection.trim().length > 0;
+  // على التحديد: استبدال داخل الـ HTML يحفظ تنسيق باقي المعروض. على المعروض
+  // كاملاً: النموذج أعاد كتابة النص كله، فيُبنى HTML جديد من مخرَجه.
+  const nextHtml = usedSelection
+    ? replaceTextInHtml(letter.contentHtml, selection, result.text)
+    : textToHtml(result.text);
 
-  const nextText = usedSelection
-    ? letter.contentText.replace(input.selection!.trim(), result.text)
-    : result.text;
+  if (nextHtml === null) {
+    // تغيّر المعروض أثناء النداء (حفظ من نافذة أخرى) — النداء دُفع ولم يُستخدم.
+    await recordUsage({
+      operation: TOOL_OPERATION[input.tool],
+      usage: result.usage,
+      status: 'ORPHANED',
+      errorCode: 'selection_not_found',
+      userId,
+      organizationId: scope.organizationId,
+      letterId,
+    });
 
+    return fail(
+      errors.conflict('تغيّر المعروض أثناء التنفيذ. لم يُطبَّق أي تعديل ولم يُحتسب الاستخدام.'),
+    );
+  }
+
+  // الخصم داخل معاملة التعديل نفسها: تعديل بلا خصم أو خصم بلا تعديل كلاهما فاسد.
+  let balanceAfter = 0;
   const updated = await updateLetter(
     userId,
     letterId,
     {
-      contentHtml: textToHtml(nextText),
+      contentHtml: nextHtml,
       note: `${AI_TOOL_LABELS[input.tool]}${usedSelection ? ' (على تحديد)' : ''}`,
+      // الناتج مبني على نسخة ما قبل النداء: حفظٌ في الأثناء لا يُكتب فوقه.
+      expectedVersion: letter.currentVersion,
     },
     'AI_TOOL',
+    async (tx) => {
+      const spent = await spend(
+        {
+          userId,
+          operation: 'AI_TOOL',
+          reason: 'AI_TOOL',
+          referenceId: letterId,
+          meta: { tool: input.tool },
+        },
+        tx,
+      );
+      if (!spent.ok) throw spent.error;
+      balanceAfter = spent.data.balanceAfter;
+    },
   );
 
-  if (!updated.ok) return fail(updated.error);
-
-  const spent = await spend({
-    userId,
-    operation: 'AI_TOOL',
-    reason: 'AI_TOOL',
-    referenceId: letterId,
-    meta: { tool: input.tool },
-  });
-
-  if (!spent.ok) return fail(spent.error);
+  if (!updated.ok) {
+    // النداء دُفع ولم يُحفظ ناتجه — يُسجَّل للمحاسبة كما في التوليد.
+    await recordUsage({
+      operation: TOOL_OPERATION[input.tool],
+      usage: result.usage,
+      status: 'ORPHANED',
+      errorCode: updated.error.code.toLowerCase(),
+      userId,
+      organizationId: scope.organizationId,
+      letterId,
+    });
+    return fail(updated.error);
+  }
+  progress.committed = true;
 
   await recordUsage({
     operation: TOOL_OPERATION[input.tool],
@@ -327,7 +470,7 @@ export async function runAiTool(
     tool: input.tool,
     contentHtml: updated.data.contentHtml,
     warnings,
-    creditBalance: spent.data.balanceAfter,
+    creditBalance: balanceAfter,
     toolsRemaining,
   });
 }

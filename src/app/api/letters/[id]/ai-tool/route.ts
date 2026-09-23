@@ -4,6 +4,7 @@ import { jsonOk, jsonError, zodFieldErrors } from '@/lib/api/response';
 import { assertSameOrigin } from '@/lib/security/cors';
 import { assertUser } from '@/lib/auth/guards';
 import { errors } from '@/lib/api/errors';
+import { readJsonBody } from '@/lib/api/request';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { RATE_LIMITS } from '@/config/constants';
 import { getSettings } from '@/lib/db/repositories/settings-repository';
@@ -33,7 +34,7 @@ export async function POST(
     });
     if (!limit.allowed) return jsonError(errors.rateLimited(limit.retryAfter));
 
-    const parsed = schema.safeParse(await request.json());
+    const parsed = schema.safeParse(await readJsonBody(request));
     if (!parsed.success) {
       return jsonError(errors.validation(zodFieldErrors(parsed.error.issues)));
     }

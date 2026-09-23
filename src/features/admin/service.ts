@@ -658,65 +658,79 @@ export async function updateUser(
 
   if (!before) return fail(errors.notFound());
 
-  if (input.role !== undefined || input.isActive !== undefined) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(input.role !== undefined ? { role: input.role } : {}),
-        ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
-      },
-    });
+  /*
+   * كل التعديلات في معاملة واحدة — #D-046
+   *
+   * السحب كان ثلاث كتابات منفصلة: خصم، ثم «تصفير» غير مشروط إن صار سالباً،
+   * ثم الدفتر. منحة متزامنة بين الأولى والثانية كان يمسحها التصفير والدفتر
+   * يسجّلها، وانقطاع بين الكتابات يترك رصيداً بلا حركة تقابله.
+   */
+  const meta = { note: input.adjustmentNote ?? '', by: context.actorId };
 
-    // تعطيل الحساب يُبطل جلساته فوراً — وإلا بقي يعمل حتى انتهاء الرمز.
-    if (input.isActive === false) {
-      await prisma.session.updateMany({
-        where: { userId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-    }
-  }
-
-  let creditBalance = before.creditBalance;
-
-  if (input.creditAdjustment && input.creditAdjustment !== 0) {
-    if (input.creditAdjustment > 0) {
-      const granted = await grant({
-        userId,
-        amount: input.creditAdjustment,
-        reason: 'ADMIN_ADJUST',
-        meta: { note: input.adjustmentNote ?? '', by: context.actorId },
-      });
-      if (!granted.ok) return fail(granted.error);
-      creditBalance = granted.data.balanceAfter;
-    } else {
-      const amount = input.creditAdjustment;
-      const updated = await prisma.user.update({
+  const creditBalance = await prisma.$transaction(async (tx) => {
+    if (input.role !== undefined || input.isActive !== undefined) {
+      await tx.user.update({
         where: { id: userId },
-        data: { creditBalance: { increment: amount } },
-        select: { creditBalance: true },
-      });
-      // لا نسمح برصيد سالب.
-      creditBalance = Math.max(updated.creditBalance, 0);
-      if (updated.creditBalance < 0) {
-        await prisma.user.update({
-          where: { id: userId },
-          data: { creditBalance: 0 },
-        });
-      }
-      // يُسجَّل المسحوب فعلاً لا المطلوب: سحب ٥ من رصيد ٢ يسحب ٢ فقط، وتسجيل
-      // ٥ كان يُفسد إعادة اشتقاق الرصيد من الدفتر (reconcile).
-      const previousBalance = updated.creditBalance - amount;
-      await prisma.creditTransaction.create({
         data: {
-          userId,
-          amount: creditBalance - previousBalance,
-          balanceAfter: creditBalance,
-          reason: 'ADMIN_ADJUST',
-          meta: { note: input.adjustmentNote ?? '', by: context.actorId },
+          ...(input.role !== undefined ? { role: input.role } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
         },
       });
+
+      // تعطيل الحساب يُبطل جلساته فوراً — وإلا بقي يعمل حتى انتهاء الرمز.
+      if (input.isActive === false) {
+        await tx.session.updateMany({
+          where: { userId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
     }
-  }
+
+    const adjustment = input.creditAdjustment ?? 0;
+
+    if (adjustment > 0) {
+      const granted = await grant(
+        { userId, amount: adjustment, reason: 'ADMIN_ADJUST', meta },
+        tx,
+      );
+      if (!granted.ok) throw granted.error;
+      return granted.data.balanceAfter;
+    }
+
+    if (adjustment < 0) {
+      // قفل الصف قبل قراءة الرصيد: لا يتغيّر بين القراءة والخصم.
+      await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+      const current = await tx.user.findUniqueOrThrow({
+        where: { id: userId },
+        select: { creditBalance: true },
+      });
+
+      // لا رصيد سالب: يُسحب المتاح فقط، ويُسجَّل المسحوب فعلاً لا المطلوب —
+      // تسجيل المطلوب يُفسد إعادة اشتقاق الرصيد من الدفتر (reconcile).
+      const withdrawn = Math.min(current.creditBalance, -adjustment);
+      if (withdrawn === 0) return current.creditBalance;
+
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: { creditBalance: { decrement: withdrawn } },
+        select: { creditBalance: true },
+      });
+
+      await tx.creditTransaction.create({
+        data: {
+          userId,
+          amount: -withdrawn,
+          balanceAfter: updated.creditBalance,
+          reason: 'ADMIN_ADJUST',
+          meta,
+        },
+      });
+
+      return updated.creditBalance;
+    }
+
+    return before.creditBalance;
+  });
 
   await audit(context, 'user.update', 'User', userId, before, input);
 

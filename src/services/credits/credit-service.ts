@@ -155,17 +155,6 @@ export async function grant(
   return ok({ balanceAfter: user.creditBalance });
 }
 
-/**
- * عدد مرات استخدام أدوات الذكاء الاصطناعي على معروض — من الدفتر نفسه:
- * كل استخدام ناجح يُسجَّل حركةً (بمبلغ صفر حين تكون الأداة مشمولة)، فالعدّ
- * لا يحتاج جدولاً ولا عموداً جديداً.
- */
-export async function countToolUses(userId: string, letterId: string): Promise<number> {
-  return prisma.creditTransaction.count({
-    where: { userId, reason: 'AI_TOOL', referenceId: letterId },
-  });
-}
-
 export interface CreditSummary {
   balance: number;
   spentThisMonth: number;
