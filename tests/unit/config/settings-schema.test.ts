@@ -3,7 +3,9 @@ import {
   SETTING_KEYS,
   isSettingKey,
   parseSetting,
+  requiredPermissionFor,
 } from '@/config/settings-schema';
+import { can } from '@/lib/auth/rbac';
 import { AI_MODEL_IDS, EFFORT_LEVEL_IDS } from '@/config/constants';
 
 /**
@@ -115,5 +117,29 @@ describe('تطابق القائمة مع ما يقرؤه الخادم', () => {
 
   it('القائمة غير فارغة', () => {
     expect(SETTING_KEYS.length).toBeGreaterThan(10);
+  });
+});
+
+describe('صلاحية تعديل إعدادات الرصيد — #D-048', () => {
+  const creditKeys = SETTING_KEYS.filter((key) => key.startsWith('credits.'));
+
+  it('إعدادات الرصيد موجودة فعلاً في القائمة', () => {
+    expect(creditKeys).toContain('credits.signupBonus');
+    expect(creditKeys).toContain('credits.costs.generate');
+  });
+
+  it.each(creditKeys)('%s محجوب عن ADMIN ومتاح لـ SUPER_ADMIN', (key) => {
+    const permission = requiredPermissionFor(key);
+    // مكافأة تسجيل 1000 أو تكلفة صفر = منح رصيد، وهو ما حُجب عن ADMIN عمداً.
+    expect(can('ADMIN', permission)).toBe(false);
+    expect(can('SUPER_ADMIN', permission)).toBe(true);
+  });
+
+  it('باقي الإعدادات تبقى لـ ADMIN', () => {
+    const others = SETTING_KEYS.filter((key) => !key.startsWith('credits.'));
+    expect(others.length).toBeGreaterThan(0);
+    for (const key of others) {
+      expect(can('ADMIN', requiredPermissionFor(key))).toBe(true);
+    }
   });
 });

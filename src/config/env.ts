@@ -154,6 +154,25 @@ function assertProductionSafety(env: ServerEnv): void {
 }
 
 function loadEnv(): ServerEnv {
+  /*
+   * `APP_ENV` إلزامي صراحةً في وضع الإنتاج — #D-048
+   *
+   * افتراضيه `development`، فخادم إنتاج نُسي في ملف بيئته هذا السطر كان
+   * يُقلع بصمت كبيئة تطوير: كوكيز بلا `secure`، وفحوص الإنتاج مُتخطّاة،
+   * وتفاصيل الأخطاء ظاهرة، ومسار الاستعادة يُرجع الرابط في الرد — أي أن أي
+   * زائر يستولي على أي حساب. سطر منسيّ لا يجوز أن يكلّف هذا؛ الرفض أرخص.
+   */
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !isBuildPhase() &&
+    !process.env.APP_ENV?.trim()
+  ) {
+    throw new Error(
+      'APP_ENV غير مضبوط والخادم يعمل بوضع الإنتاج (NODE_ENV=production). ' +
+        'اضبطه صراحةً: production أو staging، أو development للتجربة المحلية.',
+    );
+  }
+
   const parsed = serverSchema.safeParse(process.env);
 
   if (!parsed.success) {

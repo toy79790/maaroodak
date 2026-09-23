@@ -13,7 +13,7 @@ import { createSession, revokeAllSessions } from '@/lib/auth/session';
 import { AppError, errors, fail, ok, type Result } from '@/lib/api/errors';
 import { PASSWORD_RESET_TTL_MINUTES } from '@/config/constants';
 import { getSettings } from '@/lib/db/repositories/settings-repository';
-import { absoluteUrl, isDevelopment } from '@/config/env';
+import { absoluteUrl, env, isDevelopment } from '@/config/env';
 import { passwordResetMessage, sendMail } from '@/lib/mail/mailer';
 import type {
   ForgotPasswordInput,
@@ -185,7 +185,12 @@ export async function forgotPassword(
   // يخرج نسبياً بلا نطاق — لا يُفتح من البريد.
   const resetUrl = absoluteUrl(`/reset-password?token=${token}`);
 
-  if (isDevelopment) {
+  /*
+   * الرابط في الرد يمنح أي زائر حساب صاحب البريد — فالشرط مزدوج (#D-048):
+   * بيئة التطوير **و** بناء غير إنتاجي. `next start` محلياً بـ APP_ENV=development
+   * لا يُرجعه أيضاً؛ خطأ في أحد المتغيّرين وحده لا يكفي لكشفه.
+   */
+  if (isDevelopment && env.NODE_ENV !== 'production') {
     console.info(`\n[dev] رابط استعادة كلمة المرور:\n${resetUrl}\n`);
     return ok({ devResetUrl: resetUrl });
   }
