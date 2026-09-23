@@ -75,12 +75,21 @@ describe('حد أدوات الذكاء الاصطناعي تحت التزامن'
       update: { value: 2 },
     });
     invalidateSettingsCache();
-    fake.setBehavior({ text: 'ألتمس جدولة المديونية.' });
+    fake.setBehavior({ text: 'طلب جدولة مديونية\nالتماس جدولة الأقساط' });
     const { user, letter } = await seedLetter();
+    await testDb.prompt.create({
+      data: { key: `title-${Date.now()}`, name: 'عنوان', type: 'TOOL_TITLE', content: 'اقترح.' },
+    });
 
+    /*
+     * أداة اقتراح (العنوان) لا تعديل: هذا الاختبار يقيس الحد وحده. أداتا
+     * تعديل متزامنتان على المعروض نفسه تصطدمان بحارس الكتابة فوق حفظ
+     * متزامن (#D-047) فتنجح إحداهما فقط — سلوك صحيح له اختباره المستقل،
+     * وخلطه هنا جعل النتيجة معلّقة بتوقيت التنفيذ (نجح محلياً وفشل في CI).
+     */
     const results = await Promise.all(
       Array.from({ length: 5 }, () =>
-        runAiTool(user.id, scope, letter.id, { tool: 'IMPROVE' }),
+        runAiTool(user.id, scope, letter.id, { tool: 'TITLE' }),
       ),
     );
 
