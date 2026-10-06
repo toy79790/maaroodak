@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ClientForm, SubmitButton } from '@/components/shared/client-form';
 import { Input } from '@/components/ui/input';
 import { FormError, FormField } from '@/components/shared/form-field';
 import { PasswordInput } from '@/features/auth/components/password-input';
@@ -89,7 +89,7 @@ export function RegisterForm({ redirectTo = '/dashboard' }: { redirectTo?: strin
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <ClientForm onSubmit={onSubmit} noValidate className="space-y-5">
       <FormError message={formError} />
 
       <FormField id="name" label="الاسم الكامل" error={fieldErrors.name} required>
@@ -151,13 +151,13 @@ export function RegisterForm({ redirectTo = '/dashboard' }: { redirectTo?: strin
         )}
       </FormField>
 
-      <Button type="submit" block size="lg" loading={pending}>
+      <SubmitButton block size="lg" loading={pending}>
         إنشاء الحساب
-      </Button>
+      </SubmitButton>
 
       <p className="text-center text-xs text-muted-foreground">
         إنشاء الحساب مجاني. المعروض الواحد بـ{PRICE_PER_LETTER_SAR} ريالاً شاملة الضريبة.
       </p>
-    </form>
+    </ClientForm>
   );
 }

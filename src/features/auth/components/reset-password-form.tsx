@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { ClientForm, SubmitButton } from '@/components/shared/client-form';
 import { FormError, FormField } from '@/components/shared/form-field';
 import { PasswordInput } from '@/features/auth/components/password-input';
 import { api, ApiError } from '@/lib/api/client';
@@ -68,7 +69,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <ClientForm onSubmit={onSubmit} noValidate className="space-y-5">
       <FormError message={formError} />
 
       <FormField
@@ -109,9 +110,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
         سيتم تسجيل الخروج من جميع الأجهزة بعد تغيير كلمة المرور.
       </p>
 
-      <Button type="submit" block size="lg" loading={pending}>
+      <SubmitButton block size="lg" loading={pending}>
         تعيين كلمة المرور
-      </Button>
-    </form>
+      </SubmitButton>
+    </ClientForm>
   );
 }

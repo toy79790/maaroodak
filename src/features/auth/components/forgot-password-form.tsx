@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { MailCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ClientForm, SubmitButton } from '@/components/shared/client-form';
 import { Input } from '@/components/ui/input';
 import { FormError, FormField } from '@/components/shared/form-field';
 import { api, ApiError } from '@/lib/api/client';
@@ -82,7 +83,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <ClientForm onSubmit={onSubmit} noValidate className="space-y-5">
       <FormError message={formError} />
 
       <FormField id="email" label="البريد الإلكتروني" error={fieldErrors.email} required>
@@ -98,9 +99,9 @@ export function ForgotPasswordForm() {
         )}
       </FormField>
 
-      <Button type="submit" block size="lg" loading={pending}>
+      <SubmitButton block size="lg" loading={pending}>
         أرسل رابط الاستعادة
-      </Button>
-    </form>
+      </SubmitButton>
+    </ClientForm>
   );
 }

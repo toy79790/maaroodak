@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { ClientForm, SubmitButton } from '@/components/shared/client-form';
 import { Input } from '@/components/ui/input';
 import { FormError, FormField } from '@/components/shared/form-field';
 import { PasswordInput } from '@/features/auth/components/password-input';
@@ -55,7 +55,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: { redirectTo?: string }
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-5">
+    <ClientForm onSubmit={onSubmit} noValidate className="space-y-5">
       <FormError message={formError} />
 
       <FormField id="email" label="البريد الإلكتروني" error={fieldErrors.email} required>
@@ -92,9 +92,9 @@ export function LoginForm({ redirectTo = '/dashboard' }: { redirectTo?: string }
         </Link>
       </div>
 
-      <Button type="submit" block size="lg" loading={pending}>
+      <SubmitButton block size="lg" loading={pending}>
         تسجيل الدخول
-      </Button>
-    </form>
+      </SubmitButton>
+    </ClientForm>
   );
 }

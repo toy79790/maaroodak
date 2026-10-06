@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Save } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ClientForm, SubmitButton } from '@/components/shared/client-form';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { FormError, FormField } from '@/components/shared/form-field';
@@ -78,7 +78,7 @@ export function ProfileForm({
   }
 
   return (
-    <form onSubmit={save} noValidate>
+    <ClientForm onSubmit={save} noValidate>
       <Card className="p-6">
         <h2 className="mb-1 font-semibold">البيانات الشخصية</h2>
         <p className="mb-5 text-sm text-muted-foreground">
@@ -160,12 +160,12 @@ export function ProfileForm({
           </FormField>
         </div>
 
-        <Button type="submit" className="mt-6" loading={pending}>
+        <SubmitButton className="mt-6" loading={pending}>
           <Save className="size-4.5" />
           حفظ البيانات
-        </Button>
+        </SubmitButton>
       </Card>
-    </form>
+    </ClientForm>
   );
 }
 
@@ -220,7 +220,7 @@ export function ChangePasswordForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="mt-6">
+    <ClientForm onSubmit={submit} noValidate className="mt-6">
       <Card className="p-6">
         <h2 className="mb-1 font-semibold">كلمة المرور</h2>
         <p className="mb-5 text-sm text-muted-foreground">
@@ -253,10 +253,10 @@ export function ChangePasswordForm() {
           </FormField>
         </div>
 
-        <Button type="submit" variant="secondary" className="mt-6" loading={pending}>
+        <SubmitButton variant="secondary" className="mt-6" loading={pending}>
           تغيير كلمة المرور
-        </Button>
+        </SubmitButton>
       </Card>
-    </form>
+    </ClientForm>
   );
 }

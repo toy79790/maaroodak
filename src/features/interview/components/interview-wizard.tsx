@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { ArrowRight, ArrowLeft, AlertCircle, Sparkles, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ClientForm, SubmitButton } from '@/components/shared/client-form';
 import { Badge } from '@/components/ui/badge';
 import { QuestionInput } from '@/features/interview/components/question-input';
 import { api, ApiError } from '@/lib/api/client';
@@ -383,7 +384,7 @@ export function InterviewWizard({ initial }: { initial: InterviewData }) {
         requestTypeName={data.requestType.name}
       />
 
-      <form
+      <ClientForm
         onSubmit={(event) => {
           event.preventDefault();
           void save(true);
@@ -469,15 +470,15 @@ export function InterviewWizard({ initial }: { initial: InterviewData }) {
             </Button>
           ) : null}
 
-          <Button type="submit" size="lg" loading={pending} disabled={!canAdvance} className="flex-1">
+          <SubmitButton size="lg" loading={pending} disabled={!canAdvance} className="flex-1">
             {state.currentStepIndex === state.totalSteps - 1 ? 'مراجعة' : 'التالي'}
             <ArrowLeft className="size-5" />
-          </Button>
+          </SubmitButton>
         </div>
 
         {/* مساحة تعويض الشريط الثابت على الجوال */}
         <div className="h-24 lg:hidden" aria-hidden />
-      </form>
+      </ClientForm>
     </div>
   );
 }
