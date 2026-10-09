@@ -47,6 +47,7 @@ export const PUT = createAdminHandler(
       department_name: 'وزارة الموارد البشرية والتنمية الاجتماعية',
       department_addressee: 'معالي وزير الموارد البشرية والتنمية الاجتماعية',
       department_honorific: 'معالي',
+      department_pronoun: 'معاليكم',
       request_type_name: 'طلب سداد مديونية',
       subject: 'طلب سداد مديونية',
       full_name: 'محمد بن عبدالله السالم',

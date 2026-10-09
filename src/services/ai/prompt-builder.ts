@@ -1,6 +1,7 @@
 import type { AnswerMap, QuestionDef } from '@/types/questions';
 import type { SystemBlock } from '@/services/ai/ports';
 import { CORE_GUARDRAILS, escapeForFactBlock } from '@/services/ai/guardrails';
+import { addressPronoun } from '@/lib/utils/address';
 
 /**
  * بناء الـ Prompt — docs/AI_SYSTEM.md §3
@@ -25,7 +26,7 @@ export interface PromptLayers {
 }
 
 export interface GenerationContext {
-  department: { name: string; addressee?: string | null };
+  department: { name: string; addressee?: string | null; honorific?: string | null };
   requestType: { name: string };
   applicantName: string;
   answers: AnswerMap;
@@ -35,6 +36,15 @@ export interface GenerationContext {
   subject: string;
   /** تحذير إعادة التوليد بعد مخالفة ضوابط. */
   regenerationNote?: string | null;
+}
+
+/**
+ * ضمير مخاطبة الجهة في المتن — #D-051. صريح لا مستنتَج: النموذج كتب لوزير
+ * «أتقدم إلى مقامكم الكريم» ثم «معاليكم» في المعروض نفسه.
+ */
+function addressLine(honorific: string | null | undefined): string {
+  const pronoun = addressPronoun(honorific);
+  return `ضمير مخاطبة الجهة في المتن: «${pronoun}» — استعمله وحده، ولا تخاطبها بلقب غيره.`;
 }
 
 export interface BuiltPrompt {
@@ -121,6 +131,7 @@ export function buildGenerationPrompt(context: GenerationContext): BuiltPrompt {
     context.department.addressee
       ? `صيغة المخاطبة في القالب: ${context.department.addressee}`
       : null,
+    addressLine(context.department.honorific),
     `نوع الطلب: ${context.requestType.name}`,
     `موضوع المعروض: ${context.subject}`,
     '',
@@ -156,7 +167,7 @@ export interface ToolContext {
   /** الحقائق — تُمرَّر للأدوات التي قد تُغري بالاختراع (التوسيع خاصة). */
   questions?: readonly QuestionDef[];
   answers?: AnswerMap;
-  department?: { name: string } | null;
+  department?: { name: string; honorific?: string | null } | null;
   requestType?: { name: string } | null;
 }
 
@@ -168,7 +179,9 @@ export function buildToolPrompt(context: ToolContext): BuiltPrompt {
 
   const parts: string[] = [];
 
-  if (context.department) parts.push(`الجهة المخاطَبة: ${context.department.name}`);
+  if (context.department) {
+    parts.push(`الجهة المخاطَبة: ${context.department.name}`, addressLine(context.department.honorific));
+  }
   if (context.requestType) parts.push(`نوع الطلب: ${context.requestType.name}`);
 
   if (context.questions && context.answers) {

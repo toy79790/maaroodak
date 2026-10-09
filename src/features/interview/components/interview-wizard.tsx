@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { ArrowRight, ArrowLeft, AlertCircle, Sparkles, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClientForm, SubmitButton } from '@/components/shared/client-form';
+import { CreditNotice } from '@/components/shared/credit-notice';
 import { Badge } from '@/components/ui/badge';
 import { QuestionInput } from '@/features/interview/components/question-input';
 import { api, ApiError } from '@/lib/api/client';
@@ -101,11 +102,13 @@ function ReviewStep({
   onEdit,
   onGenerate,
   generating,
+  lacksCredits,
 }: {
   data: InterviewData;
   onEdit: (stepIndex: number) => void;
   onGenerate: () => void;
   generating: boolean;
+  lacksCredits: boolean;
 }) {
   const stepByKey = new Map<string, number>();
   for (const step of data.state.steps) {
@@ -198,6 +201,8 @@ function ReviewStep({
         ))}
       </dl>
 
+      {lacksCredits ? <CreditNotice context="review" className="mt-6" /> : null}
+
       <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse">
         <Button
           size="lg"
@@ -226,8 +231,16 @@ function ReviewStep({
   );
 }
 
-export function InterviewWizard({ initial }: { initial: InterviewData }) {
+export function InterviewWizard({
+  initial,
+  lacksCredits = false,
+}: {
+  initial: InterviewData;
+  /** الرصيد أقل من تكلفة الإنشاء — يُنبَّه في المراجعة قبل الضغط (#D-052). */
+  lacksCredits?: boolean;
+}) {
   const router = useRouter();
+  const formId = React.useId();
   const [data, setData] = React.useState<InterviewData>(initial);
   const [draft, setDraft] = React.useState<Record<string, AnswerValue>>({});
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
@@ -354,6 +367,7 @@ export function InterviewWizard({ initial }: { initial: InterviewData }) {
         onEdit={(step) => void goToStep(step)}
         onGenerate={() => void generate()}
         generating={generating}
+        lacksCredits={lacksCredits}
       />
     );
   }
@@ -385,6 +399,7 @@ export function InterviewWizard({ initial }: { initial: InterviewData }) {
       />
 
       <ClientForm
+        id={formId}
         onSubmit={(event) => {
           event.preventDefault();
           void save(true);
@@ -448,37 +463,51 @@ export function InterviewWizard({ initial }: { initial: InterviewData }) {
             );
           })}
         </div>
-
-        {/* شريط الإجراءات — ثابت أسفل الشاشة على الجوال */}
-        <div
-          className={cn(
-            'mt-10 flex gap-3',
-            'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:mt-0',
-            'max-lg:border-t max-lg:border-border max-lg:bg-background max-lg:p-4',
-          )}
-        >
-          {state.canGoBack ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              onClick={() => void goBack()}
-              disabled={pending}
-            >
-              <ArrowRight className="size-5" />
-              <span className="max-sm:sr-only">رجوع</span>
-            </Button>
-          ) : null}
-
-          <SubmitButton size="lg" loading={pending} disabled={!canAdvance} className="flex-1">
-            {state.currentStepIndex === state.totalSteps - 1 ? 'مراجعة' : 'التالي'}
-            <ArrowLeft className="size-5" />
-          </SubmitButton>
-        </div>
-
-        {/* مساحة تعويض الشريط الثابت على الجوال */}
-        <div className="h-24 lg:hidden" aria-hidden />
       </ClientForm>
+
+      {/*
+       * شريط الإجراءات — ثابت أسفل الشاشة على الجوال.
+       *
+       * خارج النموذج عمداً — #D-053: النموذج يحمل حركة دخول (`animate-fade-up`)
+       * تُبقي عليه `transform`، وأي عنصر بـtransform يصير الحاوية المرجعية
+       * لـ`position: fixed` في أبنائه؛ فلم يكن الشريط يثبت أسفل الشاشة بل
+       * يتبع النموذج، ويختفي «التالي» تحت الطيّة في الأسئلة الطويلة.
+       * الزر يبقى زر النموذج الافتراضي عبر السمة `form`، فـEnter يعمل كما هو.
+       */}
+      <div
+        className={cn(
+          'mt-10 flex gap-3',
+          'max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-30 max-lg:mt-0',
+          'max-lg:border-t max-lg:border-border max-lg:bg-background max-lg:p-4',
+        )}
+      >
+        {state.canGoBack ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            onClick={() => void goBack()}
+            disabled={pending}
+          >
+            <ArrowRight className="size-5" />
+            <span className="max-sm:sr-only">رجوع</span>
+          </Button>
+        ) : null}
+
+        <SubmitButton
+          form={formId}
+          size="lg"
+          loading={pending}
+          disabled={!canAdvance}
+          className="flex-1"
+        >
+          {state.currentStepIndex === state.totalSteps - 1 ? 'مراجعة' : 'التالي'}
+          <ArrowLeft className="size-5" />
+        </SubmitButton>
+      </div>
+
+      {/* مساحة تعويض الشريط الثابت على الجوال */}
+      <div className="h-24 lg:hidden" aria-hidden />
     </div>
   );
 }

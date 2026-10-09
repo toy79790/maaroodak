@@ -81,6 +81,7 @@ const VARIABLE_GROUPS: ReadonlyArray<{
       { name: 'department_addressee', hint: 'سطر المخاطبة' },
       { name: 'department_name', hint: 'اسم الجهة' },
       { name: 'department_honorific', hint: 'اللقب' },
+      { name: 'department_pronoun', hint: 'ضمير المخاطبة في المتن (معاليكم)' },
       { name: 'request_type_name', hint: 'نوع الطلب' },
       { name: 'subject', hint: 'موضوع المعروض' },
     ],

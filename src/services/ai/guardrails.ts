@@ -5,6 +5,7 @@ import {
   toLatinDigits,
 } from '@/lib/utils/arabic';
 import { LETTER_WORD_COUNT, PLACEHOLDER_PATTERN } from '@/config/constants';
+import { addressPronoun, findMismatchedPronouns } from '@/lib/utils/address';
 
 /**
  * الضوابط — docs/AI_SYSTEM.md §4 و §6
@@ -59,6 +60,7 @@ export type ViolationSeverity = 'block' | 'warn' | 'info';
 export type ViolationKind =
   | 'invented_number'
   | 'legal_citation'
+  | 'wrong_address'
   | 'exaggeration'
   | 'template_leak'
   | 'placeholder'
@@ -185,6 +187,11 @@ export interface ScanInput {
   output: string;
   /** نصوص إجابات المستخدم — مصدر الحقائق المسموح بها. */
   facts: readonly string[];
+  /**
+   * لقب الجهة المخاطَبة. يُفحص ضمير المخاطبة به إن مُرِّر — #D-051.
+   * غير ممرَّر ⇒ لا فحص (الأدوات التي لا تعرف الجهة).
+   */
+  honorific?: string | null;
   now?: Date;
 }
 
@@ -229,6 +236,19 @@ export function scan(input: ScanInput): ScanResult {
         'يحتوي النص استشهاداً بأنظمة أو مواد قانونية. المنصة لا تقدّم استشارة قانونية.',
       evidence: [...new Set(citations)].slice(0, 5),
     });
+  }
+
+  // 3ب) مخاطبة الجهة بغير لقبها — «سعادتكم» لوزير، «مقامكم» لغير الملك.
+  if (input.honorific !== undefined) {
+    const wrong = findMismatchedPronouns(output, input.honorific);
+    if (wrong.length > 0) {
+      violations.push({
+        kind: 'wrong_address',
+        severity: 'block',
+        message: `خوطبت الجهة بغير لقبها: «${wrong.join('»، «')}». الصيغة المناسبة «${addressPronoun(input.honorific)}».`,
+        evidence: wrong,
+      });
+    }
   }
 
   // 4) المبالغة والاستجداء.

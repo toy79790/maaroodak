@@ -328,12 +328,14 @@
   font-weight: 600;
 }
 
-/* تصغير الورقة على الشاشات الصغيرة بلا تغيير النسب */
-@media (max-width: 900px) {
+/*
+ * تصغير الورقة لتلائم حاويتها بلا تغيير النسب — #D-050
+ * `--paper-zoom` يحسبه PaperPreview من عرض الحاوية. `zoom` لا `transform`:
+ * الأول يُصغّر حجم التخطيط نفسه، فلا قصّ ولا تمرير أفقي ولا هامش سالب.
+ */
+@media screen {
   .letter-paper {
-    transform-origin: top center;
-    transform: scale(var(--paper-scale, 0.62));
-    margin-block-end: calc(var(--paper-min-height) * -0.38);
+    zoom: var(--paper-zoom, 1);
   }
 }
 
@@ -373,6 +375,7 @@
     box-shadow: none;
     border-radius: 0;
     transform: none !important;
+    zoom: 1 !important;
     /* هوامش الطباعة الفعلية */
     padding: 25mm 22mm;
   }

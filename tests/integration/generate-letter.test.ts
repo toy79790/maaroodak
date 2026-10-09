@@ -350,6 +350,28 @@ describe('generateLetter — الضوابط', () => {
     expect(result.data.guardrails.shouldRegenerate).toBe(false);
   });
 
+  // #D-051: معروض حقيقي خاطب وزيراً بـ«مقامكم الكريم» ثم «معاليكم».
+  it('يسمّي ضمير المخاطبة للنموذج، ويعيد التوليد إن خاطب الجهة بغير لقبها', async () => {
+    fake.setBehavior({
+      text: (_request, index) =>
+        index === 0
+          ? 'أتقدم إلى مقامكم الكريم بطلب جدولة مديونية قدرها 85000 ريال لدى بنك الرياض.'
+          : LETTER_BODY,
+      structured: passingQualityReport(),
+    });
+
+    const { user, sessionId } = await seedScenario();
+    const result = await generateLetter(user.id, scope, sessionId);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(fake.textRequests[0]?.user).toContain('«معاليكم»');
+    expect(fake.textRequests).toHaveLength(2);
+    expect(fake.textRequests[1]?.user).toContain('خوطبت الجهة بغير لقبها');
+    expect(result.data.letter.contentHtml).not.toContain('مقامكم');
+  });
+
   it('يعرض المعروض مع تنبيه حين يفشل فحص الجودة', async () => {
     fake.setBehavior({ text: LETTER_BODY, structured: undefined });
 

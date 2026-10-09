@@ -225,6 +225,7 @@ async function generateClaimed(
         department: {
           name: session.department.name,
           addressee: session.department.addressee,
+          honorific: session.department.honorific,
         },
         requestType: { name: session.requestType.name },
         applicantName: user.name,

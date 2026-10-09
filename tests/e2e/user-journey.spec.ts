@@ -54,8 +54,14 @@ test('إنشاء حساب ثم المقابلة كاملة حتى التوليد
   });
   expect(user.role).toBe('USER');
 
+  // #D-052: من لا رصيد له يعرف ذلك قبل أن يبدأ، لا بعد آخر سؤال.
+  const creditNotice = page.getByText('رصيدك لا يكفي لإنشاء معروض');
+  const lacksCredits = user.creditBalance < 1;
+  if (lacksCredits) await expect(creditNotice).toBeVisible();
+
   // --- اختيار الجهة ثم النوع ---
   await page.goto('/new');
+  if (lacksCredits) await expect(creditNotice).toBeVisible();
   await page.getByRole('button', { name: /وزارة الموارد البشرية والتنمية الاجتماعية/ }).click();
   await expect(page.getByRole('heading', { name: 'ما نوع طلبك؟' })).toBeVisible();
   await page.getByRole('button', { name: /طلب مساعدة مالية/ }).click();
@@ -75,6 +81,7 @@ test('إنشاء حساب ثم المقابلة كاملة حتى التوليد
     }).toPass({ timeout: 20_000 });
   }
   await expect(review).toBeVisible();
+  if (lacksCredits) await expect(page.getByText('إجاباتك محفوظة. أضف رصيداً')).toBeVisible();
 
   // الإجابات محفوظة على الخادم لا في المتصفح فقط.
   const session = await db.interviewSession.findFirstOrThrow({
@@ -88,17 +95,33 @@ test('إنشاء حساب ثم المقابلة كاملة حتى التوليد
   const health = await (await request.get('/api/health')).json();
   await page.getByRole('button', { name: 'أنشئ المعروض' }).click();
 
-  if (health.checks.ai.status === 'ok') {
+  if (health.checks.ai.status === 'ok' && !lacksCredits) {
     await expect(page).toHaveURL(/\/letters\/[a-z0-9]+$/, { timeout: 120_000 });
   } else {
-    // بلا مفتاح: رسالة واضحة، ولا يُخصم رصيد على عملية لم تتم.
-    await expect(page.getByText('خدمة الذكاء الاصطناعي غير مُهيّأة حالياً.')).toBeVisible();
+    // بلا مفتاح أو بلا رصيد: رسالة واضحة، ولا يُخصم رصيد على عملية لم تتم.
+    await expect(
+      page.getByText(
+        health.checks.ai.status === 'ok'
+          ? 'رصيدك لا يكفي لإتمام هذه العملية.'
+          : 'خدمة الذكاء الاصطناعي غير مُهيّأة حالياً.',
+      ),
+    ).toBeVisible();
     const after = await db.user.findUniqueOrThrow({
       where: { id: user.id },
       select: { creditBalance: true },
     });
     expect(after.creditBalance).toBe(user.creditBalance);
   }
+});
+
+test('لا تنبيه رصيد لمن يملك رصيداً', async ({ page }) => {
+  const user = await createUser();
+  await login(page, user.email, '/dashboard');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('أهلاً');
+  await expect(page.getByText('رصيدك لا يكفي لإنشاء معروض')).toHaveCount(0);
+  await page.goto('/new');
+  await expect(page.getByRole('heading', { name: 'ما الجهة التي تريد مخاطبتها؟' })).toBeVisible();
+  await expect(page.getByText('رصيدك لا يكفي لإنشاء معروض')).toHaveCount(0);
 });
 
 test('المعروض: نسخ · طباعة · Word · تعديل وحفظ · مفضلة', async ({ page, context }) => {

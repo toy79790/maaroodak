@@ -1,6 +1,7 @@
 import type { AnswerMap, QuestionDef } from '@/types/questions';
 import type { TemplateContext, TemplateValue } from '@/services/templates/engine';
 import { formatArabicDate } from '@/lib/utils/arabic';
+import { addressPronoun } from '@/lib/utils/address';
 import { site } from '@/config/site';
 
 /**
@@ -8,7 +9,8 @@ import { site } from '@/config/site';
  *
  * ثلاث فئات من المتغيرات:
  *   نظام  : today · platform_name
- *   سياق  : department_name · department_addressee · request_type_name · subject
+ *   سياق  : department_name · department_addressee · department_pronoun ·
+ *           request_type_name · subject
  *   إجابة : a.<question_key>  — ونسخة بلا بادئة لتسهيل كتابة القوالب
  */
 
@@ -18,6 +20,7 @@ export const SYSTEM_VARIABLES = [
   'department_name',
   'department_addressee',
   'department_honorific',
+  'department_pronoun',
   'request_type_name',
   'subject',
   'full_name',
@@ -102,6 +105,8 @@ export function buildTemplateContext(source: VariableSource): TemplateContext {
     department_addressee:
       source.department.addressee ?? source.department.name,
     department_honorific: source.department.honorific ?? '',
+    // «معاليكم» · «سعادتكم» · «سموكم» — لا يُثبَّت ضمير في القالب (#D-051).
+    department_pronoun: addressPronoun(source.department.honorific),
 
     request_type_name: source.requestType.name,
     subject: source.subject,

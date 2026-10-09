@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState, PageHeader } from '@/components/shared/states';
+import { CreditNotice } from '@/components/shared/credit-notice';
+import { getSettings } from '@/lib/db/repositories/settings-repository';
 import { LETTER_STATUS_LABEL, LETTER_STATUS_TONE } from '@/features/letters/labels';
 import { formatArabicDate } from '@/lib/utils/arabic';
 import { PRICE_PER_LETTER_SAR } from '@/config/constants';
@@ -55,12 +57,14 @@ function StatCard({
 export default async function DashboardPage() {
   const { user } = await requireUser();
 
-  const [stats, recentLetters, topDepartments, resumable] = await Promise.all([
+  const [stats, recentLetters, topDepartments, resumable, settings] = await Promise.all([
     getDashboardStats(user.id),
     getRecentLetters(user.id),
     getTopDepartments(user.id),
     getResumableInterview(user.id),
+    getSettings(),
   ]);
+  const lacksCredits = stats.creditBalance < settings.creditCosts.GENERATE_LETTER;
 
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
 
@@ -78,6 +82,8 @@ export default async function DashboardPage() {
           </Button>
         }
       />
+
+      {lacksCredits ? <CreditNotice context="dashboard" className="mb-6" /> : null}
 
       {resumable ? (
         <Card className="mb-8 border-primary/30 bg-primary-subtle/40 p-5">

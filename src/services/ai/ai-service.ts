@@ -68,6 +68,7 @@ export class AIService {
 
   async generateLetter(input: GenerateInput): Promise<GenerateOutput> {
     const usage: LLMUsage[] = [];
+    const honorific = input.context.department.honorific ?? null;
     const { facts } = buildFactsBlock(
       input.context.questions,
       input.context.answers,
@@ -101,7 +102,7 @@ export class AIService {
     };
 
     let text = await attempt();
-    let result = scan({ output: text, facts });
+    let result = scan({ output: text, facts, honorific });
     let retried = false;
 
     if (result.shouldRegenerate && input.allowRetryOnViolation !== false) {
@@ -111,7 +112,7 @@ export class AIService {
         .join(' ');
 
       const second = await attempt(note);
-      const secondScan = scan({ output: second, facts });
+      const secondScan = scan({ output: second, facts, honorific });
       retried = true;
 
       // نأخذ المحاولة الثانية فقط إن كانت أفضل فعلاً — قد تكون أسوأ.
@@ -240,7 +241,13 @@ export class AIService {
 
     return {
       text: cleaned,
-      scan: input.facts ? scan({ output: cleaned, facts: input.facts }) : null,
+      scan: input.facts
+        ? scan({
+            output: cleaned,
+            facts: input.facts,
+            ...(input.context.department ? { honorific: input.context.department.honorific ?? null } : {}),
+          })
+        : null,
       usage: response.usage,
     };
   }

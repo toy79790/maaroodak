@@ -210,7 +210,7 @@ const TOOL_LETTER_SELECT = {
   contentText: true,
   currentVersion: true,
   answers: true,
-  department: { select: { id: true, name: true } },
+  department: { select: { id: true, name: true, honorific: true } },
   requestType: { select: { id: true, name: true } },
 } satisfies Prisma.LetterSelect;
 
